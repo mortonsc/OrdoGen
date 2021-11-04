@@ -96,6 +96,7 @@ pub enum Office<'a> {
     OctaveDay(FeastDetails<'a>),
     Vigil(FeastDetails<'a>),
     OurLadyOnSaturday,
+    // used both for ordinary ferias per annum and as a placeholder for an office that doesn't exist
     Empty,
 }
 
@@ -108,8 +109,6 @@ pub enum OfficeCategory {
     OctaveDay,
     Vigil,
     OurLadyOnSaturday,
-    // used both for ordinary ferias per annum and as a placeholder for an office that doesn't
-    // exist, such as second vespers of certain ferias
     Empty,
 }
 
@@ -286,13 +285,21 @@ impl ConcurrenceOutcome {
     }
 }
 
+pub struct OrderedOffice<'a> {
+    office_of_day: Office<'a>,
+    to_commemorate: Vec<Office<'a>>,
+    to_translate: Vec<Office<'a>>,
+}
+
 pub trait RubricsSystem {
-    fn occurrence_outcome(&self, occ1: Office, occ2: Office, at_vespers: bool)
-        -> OccurrenceOutcome;
-    // doesn't check if either praec or seq actually has second/first vespers
-    fn concurrence_outcome(&self, praec: Office, seq: Office) -> ConcurrenceOutcome;
     fn has_first_vespers(&self, off: Office) -> bool;
     fn has_second_vespers(&self, off: Office) -> bool;
+    fn occurrence_outcome(&self, occ1: Office, occ2: Office, at_vespers: bool)
+        -> OccurrenceOutcome;
+    // assumes both praec and seq are the office of their respective days
+    fn concurrence_outcome(&self, praec: Office, seq: Office) -> ConcurrenceOutcome;
+    fn order_office<'a>(&self, occs: Vec<Office<'a>>, allow_translation: bool)
+        -> OrderedOffice<'a>;
 }
 
 pub struct Rubrics1910;
@@ -448,16 +455,15 @@ impl Rubrics1910 {
             )
             .then(self.compare_feast_precedence(occ1, occ2))
     }
-    fn is_translated(&self, d: Office) -> bool {
-        if let Some(fd) = d.feast_details() {
+    fn is_translated(&self, off: Office) -> bool {
+        if let Some(fd) = off.feast_details() {
             fd.rank >= FeastRank::GreaterDouble
                 || (fd.rank == FeastRank::LesserDouble && fd.person == Person::Doctor)
         } else {
             false
         }
     }
-    // assuming winner outranks loser when they occur,
-    // this returns true iff loser is commemorated in the office of winner
+    // assuming the office of the day is winner, returns true iff loser is to be commemorated
     fn occ_admits_commemoration(&self, winner: Office, loser: Office, at_vespers: bool) -> bool {
         let loser_wants_commemoration = match loser {
             Office::GreaterFeria {
@@ -543,6 +549,23 @@ impl Rubrics1910 {
 }
 
 impl RubricsSystem for Rubrics1910 {
+    fn has_first_vespers(&self, off: Office) -> bool {
+        match off.category() {
+            OfficeCategory::Feast
+            | OfficeCategory::WithinOctave  // days in octaves can have 1V, though it's usually omitted
+            | OfficeCategory::OctaveDay
+            | OfficeCategory::Sunday
+            | OfficeCategory::OurLadyOnSaturday => true,
+            _ => false,
+        }
+    }
+    fn has_second_vespers(&self, off: Office) -> bool {
+        match off {
+            Office::Feast(FeastDetails { rank, .. }) if rank <= FeastRank::Simple => false,
+            Office::Vigil(_) | Office::OurLadyOnSaturday => false,
+            _ => true,
+        }
+    }
     fn occurrence_outcome(
         &self,
         occ1: Office,
@@ -608,21 +631,16 @@ impl RubricsSystem for Rubrics1910 {
             has_comm,
         }
     }
-    fn has_first_vespers(&self, off: Office) -> bool {
-        match off.category() {
-            OfficeCategory::Feast
-            | OfficeCategory::WithinOctave  // days in octaves can have 1V, though it's usually omitted
-            | OfficeCategory::OctaveDay
-            | OfficeCategory::Sunday
-            | OfficeCategory::OurLadyOnSaturday => true,
-            _ => false,
-        }
-    }
-    fn has_second_vespers(&self, off: Office) -> bool {
-        match off {
-            Office::Feast(FeastDetails { rank, .. }) if rank <= FeastRank::Simple => false,
-            Office::Vigil(_) | Office::OurLadyOnSaturday => false,
-            _ => true,
+    // TODO
+    fn order_office<'a>(
+        &self,
+        occs: Vec<Office<'a>>,
+        _allow_translation: bool,
+    ) -> OrderedOffice<'a> {
+        OrderedOffice {
+            office_of_day: occs[0],
+            to_commemorate: Vec::new(),
+            to_translate: Vec::new(),
         }
     }
 }
