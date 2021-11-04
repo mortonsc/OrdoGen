@@ -108,49 +108,49 @@ fn occurrence() {
         rubrics.occurrence_outcome(CORPUS_CHRISTI, EMBER_WEDNESDAY, false),
         OccurrenceOutcome {
             office_to_celebrate: OfficeIs::DePrimo,
-            loser_outcome: LoserIs::Commemorated
+            loser_is: LoserIs::Commemorated
         }
     );
     assert_eq!(
         rubrics.occurrence_outcome(VIGIL_ASSUMPTION, ADVENT_FERIA, false),
         OccurrenceOutcome {
             office_to_celebrate: OfficeIs::DeSecundo,
-            loser_outcome: LoserIs::Omitted,
+            loser_is: LoserIs::Omitted,
         }
     );
     assert_eq!(
         rubrics.occurrence_outcome(DOM_1_QUAD, THOMAS_AP, false),
         OccurrenceOutcome {
             office_to_celebrate: OfficeIs::DePrimo,
-            loser_outcome: LoserIs::Translated,
+            loser_is: LoserIs::Translated,
         }
     );
     assert_eq!(
         rubrics.occurrence_outcome(DOM_15_POST_PENT, INVENT_STEPHEN, false),
         OccurrenceOutcome {
             office_to_celebrate: OfficeIs::DePrimo,
-            loser_outcome: LoserIs::Commemorated,
+            loser_is: LoserIs::Commemorated,
         }
     );
     assert_eq!(
         rubrics.occurrence_outcome(EXALT_CRUCIS, OCT_DAY_ASSUMPTION, false),
         OccurrenceOutcome {
             office_to_celebrate: OfficeIs::DeSecundo,
-            loser_outcome: LoserIs::Translated,
+            loser_is: LoserIs::Translated,
         }
     );
     assert_eq!(
         rubrics.occurrence_outcome(DOM_SEPTUAGESIMA, ASSUMPTION, false),
         OccurrenceOutcome {
             office_to_celebrate: OfficeIs::DeSecundo,
-            loser_outcome: LoserIs::Commemorated,
+            loser_is: LoserIs::Commemorated,
         }
     );
     assert_eq!(
         rubrics.occurrence_outcome(IN_OCT_ASSUMPTION, OUR_LADY_ON_SATURDAY, false),
         OccurrenceOutcome {
             office_to_celebrate: OfficeIs::DePrimo,
-            loser_outcome: LoserIs::Omitted,
+            loser_is: LoserIs::Omitted,
         }
     );
 }
