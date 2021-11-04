@@ -246,7 +246,7 @@ pub enum LoserIs {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct OccurrenceOutcome {
     office_to_celebrate: OfficeIs,
-    loser_outcome: LoserIs,
+    loser_is: LoserIs,
 }
 
 // note that when Vespers is split at the cap,
@@ -433,11 +433,34 @@ impl Rubrics1910 {
             ),
         }
     }
+    fn commemoration_ordering_key(&self, off: Office) -> u32 {
+        match off {
+            Office::Feast(FeastDetails { rank, .. }) if rank >= FeastRank::GreaterDouble => 9,
+            Office::OctaveDay(_) => 8, // not explicit in the rubrics
+            Office::Feast(FeastDetails {
+                rank: FeastRank::LesserDouble,
+                ..
+            }) => 7,
+            Office::Sunday { .. } => 6,
+            Office::Feast(FeastDetails {
+                rank: FeastRank::Semidouble,
+                ..
+            }) => 5,
+            Office::WithinOctave(_) => 4,
+            Office::GreaterFeria { .. } => 3,
+            Office::OurLadyOnSaturday => 2,
+            Office::Feast(FeastDetails {
+                rank: FeastRank::Simple | FeastRank::Commemoration,
+                ..
+            }) => 1,
+            _ => 0, // TODO maybe should be a panic since nothing else should be commemorated
+        }
+    }
     // if d1 and d2 are both feasts, returns an ordering indicating which takes precedence
     // otherwise returns Ordering::Equal (so it can easily be included in a chain of comparisons
     // between arbitrary Offices)
-    fn compare_feast_precedence(&self, d1: Office, d2: Office) -> Ordering {
-        if let (Some(fd1), Some(fd2)) = (d1.feast_details(), d2.feast_details()) {
+    fn compare_feast_precedence(&self, off1: Office, off2: Office) -> Ordering {
+        if let (Some(fd1), Some(fd2)) = (off1.feast_details(), off2.feast_details()) {
             true_is_greater(fd1.is_privileged, fd2.is_privileged)
                 .then(fd1.rank.cmp(&fd2.rank))
                 .then(fd1.person.cmp(&fd2.person))
@@ -454,6 +477,14 @@ impl Rubrics1910 {
                     .cmp(&self.precedence_key_occ(occ2)),
             )
             .then(self.compare_feast_precedence(occ1, occ2))
+    }
+    // Less = is commemorated first
+    // (which generally means higher ranked, so we reverse it at the end)
+    fn compare_commemoration_order(&self, comm1: Office, comm2: Office) -> Ordering {
+        self.commemoration_ordering_key(comm1)
+            .cmp(&self.commemoration_ordering_key(comm2))
+            .then(self.compare_feast_precedence(comm1, comm2)) // not explicitly in the rubrics but makes sense
+            .reverse()
     }
     fn is_translated(&self, off: Office) -> bool {
         if let Some(fd) = off.feast_details() {
@@ -580,7 +611,7 @@ impl RubricsSystem for Rubrics1910 {
             Ordering::Less => OfficeIs::DeSecundo,
         };
         let (winner, loser) = office_to_celebrate.winner_first(occ1, occ2);
-        let loser_outcome = if self.is_translated(loser) {
+        let loser_is = if self.is_translated(loser) {
             LoserIs::Translated
         } else if loser.is_vigil() && winner.is_sunday() {
             LoserIs::Anticipated
@@ -593,7 +624,7 @@ impl RubricsSystem for Rubrics1910 {
         };
         OccurrenceOutcome {
             office_to_celebrate,
-            loser_outcome,
+            loser_is,
         }
     }
     fn concurrence_outcome(&self, praec: Office, seq: Office) -> ConcurrenceOutcome {
@@ -631,16 +662,41 @@ impl RubricsSystem for Rubrics1910 {
             has_comm,
         }
     }
-    // TODO
     fn order_office<'a>(
         &self,
         occs: Vec<Office<'a>>,
-        _allow_translation: bool,
+        allow_translation: bool,
     ) -> OrderedOffice<'a> {
+        let mut to_commemorate: Vec<Office<'a>> = Vec::new();
+        let mut to_translate: Vec<Office<'a>> = Vec::new();
+        if occs.is_empty() {
+            return OrderedOffice {
+                office_of_day: Office::Empty,
+                to_commemorate,
+                to_translate,
+            };
+        }
+        let mut occs = occs.clone();
+        occs.sort_by(|&occ1, &occ2| self.compare_precedence_occ(occ1, occ2));
+        let office_of_day: Office = occs.pop().unwrap();
+        // reverse because we want to deal with higher-ranked things first
+        for &occ in occs.iter().rev() {
+            let outcome = self.occurrence_outcome(office_of_day, occ, false);
+            assert_eq!(outcome.office_to_celebrate, OfficeIs::DePrimo);
+            if outcome.loser_is == LoserIs::Translated && allow_translation {
+                to_translate.push(occ)
+            } else if (outcome.loser_is == LoserIs::Commemorated
+                || outcome.loser_is == LoserIs::Translated)
+                && to_commemorate.iter().all(|c| !c.is_of_same_person(occ))
+            {
+                to_commemorate.push(occ)
+            }
+        }
+        to_commemorate.sort_by(|&c1, &c2| self.compare_commemoration_order(c1, c2));
         OrderedOffice {
-            office_of_day: occs[0],
-            to_commemorate: Vec::new(),
-            to_translate: Vec::new(),
+            office_of_day,
+            to_commemorate,
+            to_translate,
         }
     }
 }
