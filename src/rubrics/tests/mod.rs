@@ -92,6 +92,18 @@ const EMBER_WEDNESDAY: Office = Office::GreaterFeria {
     commemorated_at_vespers: false,
 };
 
+const SIMPLE_FEAST: Office = Office::Feast(FeastDetails {
+    id: "__simple__",
+    rank: FeastRank::Simple,
+    sub_rank: FeastSubRank::Primary,
+    person: Person::Other,
+    is_patron_or_titular: false,
+    is_privileged: false,
+    is_local: false,
+    is_moveable: false,
+    octave: None,
+});
+
 const OUR_LADY_ON_SATURDAY: Office = Office::OurLadyOnSaturday;
 
 #[test]
@@ -153,4 +165,29 @@ fn occurrence() {
             loser_is: LoserIs::Omitted,
         }
     );
+}
+
+#[test]
+fn concurrence() {
+    let rubrics = Rubrics1910;
+    assert_eq!(
+        rubrics.concurrence_outcome(IN_OCT_ASSUMPTION, IN_OCT_ASSUMPTION),
+        ConcurrenceOutcome {
+            office_to_celebrate: VespersIs::DePraec,
+            has_comm: false,
+        }
+    )
+}
+
+#[test]
+fn feria_with_greater_feria_comm_simple() {
+    let rubrics = Rubrics1910;
+
+    let praec_day = OrderedOffice::of_only(Office::Empty);
+    let seq_day = rubrics.order_office(vec![EMBER_WEDNESDAY, SIMPLE_FEAST], true);
+    assert_eq!(seq_day.office_of_day, EMBER_WEDNESDAY);
+    assert_eq!(seq_day.to_commemorate[0], SIMPLE_FEAST);
+    let ov = rubrics.order_vespers(praec_day, seq_day);
+    assert_eq!(ov.vespers, Vespers::SecondVespers(Office::Empty));
+    assert_eq!(ov.to_commemorate[0], SIMPLE_FEAST);
 }
