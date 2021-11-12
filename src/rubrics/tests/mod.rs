@@ -180,6 +180,17 @@ fn concurrence() {
 }
 
 #[test]
+fn consecutive_days_in_octave() {
+    let rubrics = Rubrics1910;
+
+    let praec_day = OrderedOffice::of_only(IN_OCT_ASSUMPTION);
+    let seq_day = praec_day.clone();
+    let ov = rubrics.order_vespers(praec_day, seq_day);
+    assert_eq!(ov.vespers, Vespers::SecondVespers(IN_OCT_ASSUMPTION));
+    assert!(ov.to_commemorate.is_empty());
+}
+
+#[test]
 fn feria_with_greater_feria_comm_simple() {
     let rubrics = Rubrics1910;
 
