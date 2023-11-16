@@ -1,16 +1,20 @@
+use serde::Deserialize;
 use time::util::is_leap_year;
 use time::{Date, Month};
 
 pub mod generate;
 
+#[cfg(test)]
+mod tests;
+
 use crate::rubrics::*;
 
 #[derive(Debug, Clone)]
 pub struct LiturgicalDay<'a> {
-    office: Office<'a>,
-    comms_at_lauds: Vec<Office<'a>>,
-    vespers: Vespers<'a>,
-    comms_at_vespers: Vec<Office<'a>>,
+    pub office: Office<'a>,
+    pub comms_at_lauds: Vec<Office<'a>>,
+    pub vespers: Vespers<'a>,
+    pub comms_at_vespers: Vec<Office<'a>>,
 }
 
 const PLACEHOLDER: LiturgicalDay = LiturgicalDay {
@@ -38,4 +42,20 @@ impl<'a> Calendar<'a> {
             .ordinal();
         Some(self.days[ordinal as usize].clone())
     }
+}
+
+#[derive(Debug, Deserialize, PartialEq, Eq)]
+pub struct OctaveDetails<'a> {
+    pub id: &'a str,
+    pub octave_type: OctaveType,
+}
+
+#[derive(Debug, Deserialize, PartialEq, Eq)]
+pub struct CalendarEntry<'a> {
+    #[serde(flatten)]
+    pub feast_details: FeastDetails<'a>,
+    #[serde(default)]
+    pub vigil: Option<&'a str>,
+    #[serde(default)]
+    pub octave: Option<OctaveDetails<'a>>,
 }

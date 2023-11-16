@@ -1,3 +1,4 @@
+use serde::Deserialize;
 use std::cmp::Ordering;
 
 mod display;
@@ -22,7 +23,7 @@ fn false_is_greater(rhs: bool, lhs: bool) -> Ordering {
 }
 
 // listed from lowest-to-highest so the #derive works
-#[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Deserialize)]
 pub enum FeastRank {
     // commemorations are effectively just perpetually superseded simples
     // but many days are simple feast + commemoration
@@ -36,19 +37,25 @@ pub enum FeastRank {
     DoubleFirstClass,
 }
 
-#[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Deserialize)]
 pub enum FeastSubRank {
     Secondary,
     Primary,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+impl Default for FeastSubRank {
+    fn default() -> Self {
+        FeastSubRank::Primary
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 pub enum OctaveType {
     // TODO: others
     Common,
 }
 
-#[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Deserialize)]
 pub enum Person {
     Other,
     Doctor,
@@ -61,6 +68,12 @@ pub enum Person {
     Trinity,
 }
 
+impl Default for Person {
+    fn default() -> Self {
+        Person::Other
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq)]
 pub enum SundayRank {
     Common,
@@ -68,21 +81,26 @@ pub enum SundayRank {
     FirstClass,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 pub struct FeastDetails<'a> {
     pub id: &'a str,
     pub rank: FeastRank,
+    #[serde(default)]
     pub sub_rank: FeastSubRank,
+    #[serde(default)]
     pub person: Person,
+    #[serde(default)]
     pub is_patron_or_titular: bool,
+    #[serde(default)]
     pub is_privileged: bool,
+    #[serde(default)]
     pub is_local: bool,
+    #[serde(default)]
     pub is_moveable: bool,
-    pub octave: Option<OctaveType>,
 }
 
 impl<'a> FeastDetails<'a> {
-    pub fn new(id: &'a str, rank: FeastRank) -> Self {
+    pub const fn new(id: &'a str, rank: FeastRank) -> Self {
         Self {
             id,
             rank,
@@ -92,7 +110,6 @@ impl<'a> FeastDetails<'a> {
             is_privileged: false,
             is_local: false,
             is_moveable: false,
-            octave: None,
         }
     }
     pub fn with_person(mut self, person: Person) -> Self {
@@ -119,10 +136,6 @@ impl<'a> FeastDetails<'a> {
         self.is_moveable = true;
         self
     }
-    pub fn with_octave(mut self, ot: OctaveType) -> Self {
-        self.octave = Some(ot);
-        self
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -142,8 +155,16 @@ pub enum Office<'a> {
         commemorated_at_vespers: bool,
         is_privileged: bool,
     },
-    WithinOctave(FeastDetails<'a>),
-    OctaveDay(FeastDetails<'a>),
+    WithinOctave {
+        id: &'a str,
+        feast_details: FeastDetails<'a>,
+        octave_type: OctaveType,
+    },
+    OctaveDay {
+        id: &'a str,
+        feast_details: FeastDetails<'a>,
+        octave_type: OctaveType,
+    },
     Vigil {
         id: &'a str,
         feast_details: FeastDetails<'a>,
@@ -171,8 +192,8 @@ impl<'a> Office<'a> {
             Self::Feast(_) => OfficeCategory::Feast,
             Self::Sunday { .. } => OfficeCategory::Sunday,
             Self::GreaterFeria { .. } => OfficeCategory::GreaterFeria,
-            Self::WithinOctave(_) => OfficeCategory::WithinOctave,
-            Self::OctaveDay(_) => OfficeCategory::OctaveDay,
+            Self::WithinOctave { .. } => OfficeCategory::WithinOctave,
+            Self::OctaveDay { .. } => OfficeCategory::OctaveDay,
             Self::Vigil { .. } => OfficeCategory::Vigil,
             Self::OurLadyOnSaturday => OfficeCategory::OurLadyOnSaturday,
             Self::Empty => OfficeCategory::Empty,
@@ -228,11 +249,14 @@ impl<'a> Office<'a> {
     pub fn assoc_feast_details(self) -> Option<FeastDetails<'a>> {
         match self {
             Self::Feast(fd)
-            | Self::WithinOctave(fd)
-            | Self::OctaveDay(fd)
+            | Self::WithinOctave {
+                feast_details: fd, ..
+            }
+            | Self::OctaveDay {
+                feast_details: fd, ..
+            }
             | Self::Vigil {
-                id: _,
-                feast_details: fd,
+                feast_details: fd, ..
             } => Some(fd),
             _ => None,
         }
@@ -336,9 +360,9 @@ impl ConcurrenceOutcome {
 
 #[derive(Debug, Clone)]
 pub struct OrderedOffice<'a> {
-    office_of_day: Office<'a>,
-    to_commemorate: Vec<Office<'a>>,
-    to_translate: Vec<Office<'a>>,
+    pub office_of_day: Office<'a>,
+    pub to_commemorate: Vec<Office<'a>>,
+    pub to_translate: Vec<Office<'a>>,
 }
 
 impl<'a> OrderedOffice<'a> {
@@ -360,9 +384,9 @@ pub enum Vespers<'a> {
 
 #[derive(Debug)]
 pub struct OrderedVespers<'a> {
-    vespers: Vespers<'a>,
+    pub vespers: Vespers<'a>,
     // TODO: need to mark whether each of these is first or second vespers
-    to_commemorate: Vec<Office<'a>>,
+    pub to_commemorate: Vec<Office<'a>>,
 }
 
 pub trait RubricsSystem {
@@ -380,4 +404,5 @@ pub trait RubricsSystem {
         praec_day: OrderedOffice<'a>,
         seq_day: OrderedOffice<'a>,
     ) -> OrderedVespers<'a>;
+    fn date_of_moveable_feast(&self, id: &str, year: i32) -> Option<usize>;
 }

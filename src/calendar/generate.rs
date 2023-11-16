@@ -5,7 +5,7 @@ use time::util::is_leap_year;
 use super::{Calendar, LiturgicalDay};
 use crate::rubrics::RubricsSystem;
 
-pub fn temporal_cycle_ids<'a, R: RubricsSystem>(year: i32, rubrics_system: R) -> Vec<String> {
+pub fn temporal_cycle_ids<'a, R: RubricsSystem>(year: i32, _rubrics_system: R) -> Vec<String> {
     let n_days = if is_leap_year(year) { 366 } else { 365 };
     let mut days = vec!["___".to_string(); n_days];
     let jan_1 = NaiveDate::from_ymd_opt(year, 1, 1).expect("year out of range");
@@ -26,9 +26,7 @@ pub fn temporal_cycle_ids<'a, R: RubricsSystem>(year: i32, rubrics_system: R) ->
         days[dom_post_epiph + (7 * i)] = id;
     }
 
-    let easter = easter::date(year)
-        .expect("date of easter invalid")
-        .ordinal0() as usize;
+    let easter = easter::date(year).expect("year out of range").ordinal0() as usize;
     days[easter] = "dom-resurrectionis".to_string();
     for i in 1..7 {
         let id = format!("dom-{}-post-pascha", i);

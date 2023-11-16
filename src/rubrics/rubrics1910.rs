@@ -1,5 +1,7 @@
 use super::*;
+use chrono::{Datelike, NaiveDate};
 use itertools::chain;
+use liturgical::western::easter;
 
 pub struct Rubrics1910;
 
@@ -24,7 +26,8 @@ impl Rubrics1910 {
                 rank: FeastRank::DoubleSecondClass,
                 ..
             }) => 12,
-            Office::OctaveDay(_) => 11,
+            //TODO: separate different octave types
+            Office::OctaveDay { .. } => 11,
             Office::Feast(FeastDetails {
                 rank: FeastRank::GreaterDouble,
                 ..
@@ -41,7 +44,8 @@ impl Rubrics1910 {
                 rank: FeastRank::Semidouble,
                 ..
             }) => 7,
-            Office::WithinOctave(_) => 6,
+            //TODO: separate different octave types
+            Office::WithinOctave { .. } => 6,
             Office::GreaterFeria { .. } => 5,
             Office::Vigil { .. } => 4,
             Office::OurLadyOnSaturday => 3,
@@ -89,7 +93,8 @@ impl Rubrics1910 {
                     ..
                 }),
             )
-            | (_, Office::OctaveDay(_))
+                // TODO: separate out different octave types
+            | (_, Office::OctaveDay { .. })
             | (
                 _,
                 Office::Feast(FeastDetails {
@@ -99,7 +104,8 @@ impl Rubrics1910 {
             ) => 6,
             (true, Office::Sunday { .. }) => 5,
             (false, Office::Sunday { .. })
-            | (_, Office::WithinOctave(_))
+                // TODO: separate out different octave types
+            | (_, Office::WithinOctave {..})
             | (
                 _,
                 Office::Feast(FeastDetails {
@@ -135,7 +141,7 @@ impl Rubrics1910 {
     fn commemoration_ordering_key(&self, off: Office) -> u32 {
         match off {
             Office::Feast(FeastDetails { rank, .. }) if rank >= FeastRank::GreaterDouble => 9,
-            Office::OctaveDay(_) => 8, // not explicit in the rubrics; maybe should tie with greater double?
+            Office::OctaveDay { .. } => 8, // not explicit in the rubrics; maybe should tie with greater double?
             Office::Feast(FeastDetails {
                 rank: FeastRank::LesserDouble,
                 ..
@@ -145,7 +151,7 @@ impl Rubrics1910 {
                 rank: FeastRank::Semidouble,
                 ..
             }) => 5,
-            Office::WithinOctave(_) => 4,
+            Office::WithinOctave { .. } => 4,
             Office::GreaterFeria { .. } => 3,
             Office::OurLadyOnSaturday => 2,
             Office::Feast(FeastDetails {
@@ -184,7 +190,15 @@ impl Rubrics1910 {
             return VespersIs::DePraec;
         }
         // hacky special case for successive days in octaves
-        if let (Office::WithinOctave(fd1), Office::WithinOctave(fd2)) = (praec, seq) {
+        if let (
+            Office::WithinOctave {
+                feast_details: fd1, ..
+            },
+            Office::WithinOctave {
+                feast_details: fd2, ..
+            },
+        ) = (praec, seq)
+        {
             if fd1.id == fd2.id {
                 return VespersIs::DePraec;
             }
@@ -259,7 +273,8 @@ impl Rubrics1910 {
         }
         if praec.feast_rank() == Some(FeastRank::DoubleFirstClass) {
             return match seq {
-                Office::OurLadyOnSaturday | Office::WithinOctave(_) => false,
+                // TODO: is this true for all days within octaves?
+                Office::OurLadyOnSaturday | Office::WithinOctave { .. } => false,
                 Office::Feast(FeastDetails { rank, .. }) => rank >= FeastRank::Semidouble,
                 _ => true,
             };
@@ -294,12 +309,20 @@ impl Rubrics1910 {
             },
             Some(FeastRank::DoubleSecondClass) => match praec {
                 Office::Sunday { rank, .. } if rank >= SundayRank::SecondClass => true,
-                Office::OctaveDay(_) => true,
+                // TODO: is this true for all octave days?
+                Office::OctaveDay { .. } => true,
                 Office::Feast(FeastDetails { rank, .. }) if rank >= FeastRank::LesserDouble => true,
                 _ => false,
             },
             _ => true,
         }
+    }
+
+    fn holy_family_date(&self, year: i32) -> usize {
+        // Sunday after Epiphany
+        let epiphany_date = NaiveDate::from_ymd_opt(year, 1, 6).expect("year out of range");
+        (epiphany_date.ordinal0() as usize) + 7
+            - (epiphany_date.weekday().number_from_monday() as usize)
     }
 }
 
@@ -328,7 +351,7 @@ impl RubricsSystem for Rubrics1910 {
         match off {
             Office::Sunday { rank, .. } => rank < SundayRank::SecondClass, // should this be all Sundays?
             Office::Feast(FeastDetails { rank, .. }) => rank < FeastRank::Semidouble,
-            Office::OctaveDay(_) => false,
+            Office::OctaveDay { .. } => false,
             Office::GreaterFeria { is_privileged, .. } => !is_privileged,
             _ => true,
         }
@@ -456,6 +479,15 @@ impl RubricsSystem for Rubrics1910 {
         OrderedVespers {
             vespers,
             to_commemorate,
+        }
+    }
+    fn date_of_moveable_feast(&self, id: &str, year: i32) -> Option<usize> {
+        match id {
+            "s-familiae-jmj" => Some(self.holy_family_date(year)),
+            "ss-trinitatis" => {
+                Some(easter::date(year).expect("year out of range").ordinal0() as usize + 56)
+            }
+            &_ => None,
         }
     }
 }

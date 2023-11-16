@@ -9,7 +9,6 @@ const CORPUS_CHRISTI: Office = Office::Feast(FeastDetails {
     is_privileged: true,
     is_local: false,
     is_moveable: true,
-    octave: Some(OctaveType::Common), // TODO: haven't fleshed out octave types yet
 });
 
 const THOMAS_AP: Office = Office::Feast(FeastDetails {
@@ -21,7 +20,6 @@ const THOMAS_AP: Office = Office::Feast(FeastDetails {
     is_privileged: false,
     is_local: false,
     is_moveable: false,
-    octave: None,
 });
 
 const EXALT_CRUCIS: Office = Office::Feast(FeastDetails {
@@ -33,7 +31,6 @@ const EXALT_CRUCIS: Office = Office::Feast(FeastDetails {
     is_privileged: false,
     is_local: false,
     is_moveable: false,
-    octave: None,
 });
 
 const INVENT_STEPHEN: Office = Office::Feast(FeastDetails {
@@ -45,7 +42,6 @@ const INVENT_STEPHEN: Office = Office::Feast(FeastDetails {
     is_privileged: false,
     is_local: false,
     is_moveable: false,
-    octave: None,
 });
 
 const DOM_15_POST_PENT: Office = Office::Sunday {
@@ -75,7 +71,6 @@ const ASSUMPTION_DET: FeastDetails = FeastDetails {
     is_privileged: false,
     is_local: false,
     is_moveable: false,
-    octave: Some(OctaveType::Common), // TODO: haven't fleshed out octave types yet
 };
 
 const ASSUMPTION: Office = Office::Feast(ASSUMPTION_DET);
@@ -84,8 +79,17 @@ const VIGIL_ASSUMPTION: Office = Office::Vigil {
     feast_details: ASSUMPTION_DET,
 };
 
-const IN_OCT_ASSUMPTION: Office = Office::WithinOctave(ASSUMPTION_DET);
-const OCT_DAY_ASSUMPTION: Office = Office::OctaveDay(ASSUMPTION_DET);
+const IN_OCT_ASSUMPTION: Office = Office::WithinOctave {
+    id: "inf-oct-assumptionis-bmv",
+    feast_details: ASSUMPTION_DET,
+    octave_type: OctaveType::Common,
+};
+
+const OCT_DAY_ASSUMPTION: Office = Office::OctaveDay {
+    id: "in-oct-assumptions-bmv",
+    feast_details: ASSUMPTION_DET,
+    octave_type: OctaveType::Common,
+};
 
 const ADVENT_FERIA: Office = Office::GreaterFeria {
     id: None,
@@ -108,7 +112,6 @@ const SIMPLE_FEAST: Office = Office::Feast(FeastDetails {
     is_privileged: false,
     is_local: false,
     is_moveable: false,
-    octave: None,
 });
 
 const OUR_LADY_ON_SATURDAY: Office = Office::OurLadyOnSaturday;
