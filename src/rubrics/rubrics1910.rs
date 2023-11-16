@@ -43,7 +43,7 @@ impl Rubrics1910 {
             }) => 7,
             Office::WithinOctave(_) => 6,
             Office::GreaterFeria { .. } => 5,
-            Office::Vigil(_) => 4,
+            Office::Vigil { .. } => 4,
             Office::OurLadyOnSaturday => 3,
             Office::Feast(FeastDetails {
                 rank: FeastRank::Simple,
@@ -319,7 +319,7 @@ impl RubricsSystem for Rubrics1910 {
     fn has_second_vespers(&self, off: Office) -> bool {
         match off {
             Office::Feast(FeastDetails { rank, .. }) if rank <= FeastRank::Simple => false,
-            Office::Vigil(_) | Office::OurLadyOnSaturday => false,
+            Office::Vigil { .. } | Office::OurLadyOnSaturday => false,
             _ => true,
         }
     }

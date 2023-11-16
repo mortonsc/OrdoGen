@@ -130,6 +130,7 @@ pub enum Office<'a> {
     Feast(FeastDetails<'a>),
     Sunday {
         id: &'a str,
+        matins_id: Option<&'a str>,
         rank: SundayRank,
     },
     GreaterFeria {
@@ -143,7 +144,10 @@ pub enum Office<'a> {
     },
     WithinOctave(FeastDetails<'a>),
     OctaveDay(FeastDetails<'a>),
-    Vigil(FeastDetails<'a>),
+    Vigil {
+        id: &'a str,
+        feast_details: FeastDetails<'a>,
+    },
     OurLadyOnSaturday,
     // used both for ordinary ferias per annum and as a placeholder for an office that doesn't exist
     Empty,
@@ -223,9 +227,13 @@ impl<'a> Office<'a> {
     }
     pub fn assoc_feast_details(self) -> Option<FeastDetails<'a>> {
         match self {
-            Self::Feast(fd) | Self::WithinOctave(fd) | Self::OctaveDay(fd) | Self::Vigil(fd) => {
-                Some(fd)
-            }
+            Self::Feast(fd)
+            | Self::WithinOctave(fd)
+            | Self::OctaveDay(fd)
+            | Self::Vigil {
+                id: _,
+                feast_details: fd,
+            } => Some(fd),
             _ => None,
         }
     }
@@ -334,7 +342,7 @@ pub struct OrderedOffice<'a> {
 }
 
 impl<'a> OrderedOffice<'a> {
-    fn of_only(off: Office<'a>) -> Self {
+    pub fn of_only(off: Office<'a>) -> Self {
         Self {
             office_of_day: off,
             to_commemorate: Vec::new(),

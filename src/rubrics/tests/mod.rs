@@ -50,21 +50,24 @@ const INVENT_STEPHEN: Office = Office::Feast(FeastDetails {
 
 const DOM_15_POST_PENT: Office = Office::Sunday {
     id: "dom-15-post-pent",
+    matins_id: None,
     rank: SundayRank::Common,
 };
 
 const DOM_1_QUAD: Office = Office::Sunday {
     id: "dom-1-quad",
+    matins_id: None,
     rank: SundayRank::FirstClass,
 };
 
 const DOM_SEPTUAGESIMA: Office = Office::Sunday {
     id: "dom-septuagesima",
+    matins_id: None,
     rank: SundayRank::SecondClass,
 };
 
 const ASSUMPTION_DET: FeastDetails = FeastDetails {
-    id: "assumption",
+    id: "in-assumptione-bmv",
     rank: FeastRank::DoubleFirstClass,
     sub_rank: FeastSubRank::Primary,
     person: Person::OurLady,
@@ -76,7 +79,11 @@ const ASSUMPTION_DET: FeastDetails = FeastDetails {
 };
 
 const ASSUMPTION: Office = Office::Feast(ASSUMPTION_DET);
-const VIGIL_ASSUMPTION: Office = Office::Vigil(ASSUMPTION_DET);
+const VIGIL_ASSUMPTION: Office = Office::Vigil {
+    id: "in-vig-assumptionis-bmv",
+    feast_details: ASSUMPTION_DET,
+};
+
 const IN_OCT_ASSUMPTION: Office = Office::WithinOctave(ASSUMPTION_DET);
 const OCT_DAY_ASSUMPTION: Office = Office::OctaveDay(ASSUMPTION_DET);
 
