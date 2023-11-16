@@ -175,14 +175,6 @@ impl Rubrics1910 {
             Ordering::Equal
         }
     }
-    fn compare_precedence_occ(&self, occ1: Office, occ2: Office) -> Ordering {
-        true_is_greater(occ1.is_privileged(), occ2.is_privileged())
-            .then(
-                self.precedence_key_occ(occ1)
-                    .cmp(&self.precedence_key_occ(occ2)),
-            )
-            .then(self.compare_feast_precedence(occ1, occ2))
-    }
     // returns VespersIs rather than an Ordering because returning an Ordering
     // might imply this is a proper ordering, which it's not
     fn compare_precedence_conc(&self, praec: Office, seq: Office) -> VespersIs {
@@ -219,103 +211,11 @@ impl Rubrics1910 {
             Ordering::Less => VespersIs::DeSeq,
         }
     }
-    // Less = is commemorated first
-    // (which generally means higher ranked, so we reverse it at the end)
-    fn compare_commemoration_order(&self, comm1: Office, comm2: Office) -> Ordering {
-        self.commemoration_ordering_key(comm1)
-            .cmp(&self.commemoration_ordering_key(comm2))
-            .reverse()
-    }
     fn is_translated(&self, off: Office) -> bool {
         off.feast_details().map_or(false, |fd| {
             fd.rank >= FeastRank::GreaterDouble
                 || (fd.rank == FeastRank::LesserDouble && fd.person == Person::Doctor)
         })
-    }
-    // assuming the office of the day is winner, returns true iff loser is to be commemorated
-    fn occ_admits_commemoration(&self, winner: Office, loser: Office, at_vespers: bool) -> bool {
-        let loser_wants_commemoration = match loser {
-            Office::GreaterFeria {
-                commemorated_at_vespers: false,
-                ..
-            } if at_vespers => false,
-            Office::OurLadyOnSaturday | Office::Empty => false,
-            _ => true,
-        };
-        if !loser_wants_commemoration {
-            return false;
-        }
-        if winner.is_of_same_person(loser) {
-            return false;
-        }
-        if winner.is_greater_feria() && loser.is_vigil() {
-            return false;
-        }
-        if winner.feast_rank() == Some(FeastRank::DoubleFirstClass) {
-            return match loser.category() {
-                OfficeCategory::Sunday
-                | OfficeCategory::OctaveDay
-                | OfficeCategory::GreaterFeria => true,
-                OfficeCategory::Feast => loser.feast_rank().unwrap() >= FeastRank::GreaterDouble,
-                _ => false,
-            };
-        }
-        true
-    }
-    // assuming vespers is of praec, returns true if seq is to be commemorated
-    fn praec_admits_commemoration(&self, praec: Office, seq: Office) -> bool {
-        assert!(self.has_second_vespers(praec));
-        if !self.has_first_vespers(seq) {
-            return false;
-        }
-        if praec.is_of_same_person(seq) {
-            return false;
-        }
-        if praec.feast_rank() == Some(FeastRank::DoubleFirstClass) {
-            return match seq {
-                // TODO: is this true for all days within octaves?
-                Office::OurLadyOnSaturday | Office::WithinOctave { .. } => false,
-                Office::Feast(FeastDetails { rank, .. }) => rank >= FeastRank::Semidouble,
-                _ => true,
-            };
-        }
-        true
-    }
-    // assuming vespers is of seq, returns true if praec is to be commemorated
-    fn seq_admits_commemoration(&self, praec: Office, seq: Office) -> bool {
-        assert!(self.has_first_vespers(seq));
-        if !self.has_second_vespers(praec) {
-            return false;
-        }
-        if let Office::GreaterFeria {
-            commemorated_at_vespers: false,
-            ..
-        } = praec
-        {
-            return false;
-        }
-        if praec.is_of_same_person(seq) {
-            return false;
-        }
-        match seq.feast_rank() {
-            Some(FeastRank::DoubleFirstClass) => match praec {
-                Office::Sunday { rank, .. } if rank >= SundayRank::SecondClass => true,
-                Office::Feast(FeastDetails { rank, .. })
-                    if rank >= FeastRank::DoubleSecondClass =>
-                {
-                    true
-                }
-                _ => false,
-            },
-            Some(FeastRank::DoubleSecondClass) => match praec {
-                Office::Sunday { rank, .. } if rank >= SundayRank::SecondClass => true,
-                // TODO: is this true for all octave days?
-                Office::OctaveDay { .. } => true,
-                Office::Feast(FeastDetails { rank, .. }) if rank >= FeastRank::LesserDouble => true,
-                _ => false,
-            },
-            _ => true,
-        }
     }
 
     fn holy_family_date(&self, year: i32) -> usize {
@@ -403,82 +303,101 @@ impl RubricsSystem for Rubrics1910 {
             has_comm,
         }
     }
-    fn order_office<'a>(
-        &self,
-        occs: Vec<Office<'a>>,
-        allow_translation: bool,
-    ) -> OrderedOffice<'a> {
-        let mut to_commemorate: Vec<Office<'a>> = Vec::new();
-        let mut to_translate: Vec<Office<'a>> = Vec::new();
-        if occs.is_empty() {
-            return OrderedOffice {
-                office_of_day: Office::Empty,
-                to_commemorate,
-                to_translate,
+    fn compare_precedence_occ(&self, occ1: Office, occ2: Office) -> Ordering {
+        true_is_greater(occ1.is_privileged(), occ2.is_privileged())
+            .then(
+                self.precedence_key_occ(occ1)
+                    .cmp(&self.precedence_key_occ(occ2)),
+            )
+            .then(self.compare_feast_precedence(occ1, occ2))
+    }
+    // Less = is commemorated first
+    // (which generally means higher ranked, so we reverse it at the end)
+    fn compare_commemoration_order(&self, comm1: Office, comm2: Office) -> Ordering {
+        self.commemoration_ordering_key(comm1)
+            .cmp(&self.commemoration_ordering_key(comm2))
+            .reverse()
+    }
+    fn occ_admits_commemoration(&self, winner: Office, loser: Office, at_vespers: bool) -> bool {
+        let loser_wants_commemoration = match loser {
+            Office::GreaterFeria {
+                commemorated_at_vespers: false,
+                ..
+            } if at_vespers => false,
+            Office::OurLadyOnSaturday | Office::Empty => false,
+            _ => true,
+        };
+        if !loser_wants_commemoration {
+            return false;
+        }
+        if winner.is_of_same_person(loser) {
+            return false;
+        }
+        if winner.is_greater_feria() && loser.is_vigil() {
+            return false;
+        }
+        if winner.feast_rank() == Some(FeastRank::DoubleFirstClass) {
+            return match loser.category() {
+                OfficeCategory::Sunday
+                | OfficeCategory::OctaveDay
+                | OfficeCategory::GreaterFeria => true,
+                OfficeCategory::Feast => loser.feast_rank().unwrap() >= FeastRank::GreaterDouble,
+                _ => false,
             };
         }
-        let mut occs = occs.clone();
-        occs.sort_by(|&occ1, &occ2| self.compare_precedence_occ(occ1, occ2));
-        let office_of_day: Office = occs.pop().unwrap();
-        // reverse because we want to deal with higher-ranked things first
-        for &occ in occs.iter().rev() {
-            let outcome = self.occurrence_outcome(office_of_day, occ, false);
-            assert_eq!(outcome.office_to_celebrate, OfficeIs::DePrimo);
-            if outcome.loser_is == LoserIs::Translated && allow_translation {
-                to_translate.push(occ);
-            } else if (outcome.loser_is == LoserIs::Commemorated
-                || outcome.loser_is == LoserIs::Translated)
-                && to_commemorate.iter().all(|c| !c.is_of_same_person(occ))
-            {
-                to_commemorate.push(occ);
-            }
-        }
-        to_commemorate.sort_by(|&c1, &c2| self.compare_commemoration_order(c1, c2));
-        OrderedOffice {
-            office_of_day,
-            to_commemorate,
-            to_translate,
-        }
+        true
     }
-    fn order_vespers<'a>(
-        &self,
-        praec_day: OrderedOffice<'a>,
-        seq_day: OrderedOffice<'a>,
-    ) -> OrderedVespers<'a> {
-        let praec = if self.has_second_vespers(praec_day.office_of_day) {
-            praec_day.office_of_day
-        } else {
-            Office::Empty
-        };
-        let seq = if self.has_first_vespers(seq_day.office_of_day) {
-            seq_day.office_of_day
-        } else {
-            Office::Empty
-        };
-        let mut to_commemorate: Vec<Office<'a>> = Vec::new();
-        let co = self.concurrence_outcome(praec, seq);
-        let vespers = co.office_to_celebrate.applied_to(praec, seq);
-        if co.praec_wins() && co.has_comm {
-            to_commemorate.push(seq);
-        } else if co.seq_wins() && co.has_comm {
-            to_commemorate.push(praec);
+    fn praec_admits_commemoration(&self, praec: Office, seq: Office) -> bool {
+        assert!(self.has_second_vespers(praec));
+        if !self.has_first_vespers(seq) {
+            return false;
         }
-        let comms_from_praec = praec_day.to_commemorate.iter().filter(|&&off| {
-            self.has_second_vespers(off)
-                // extra check because some occuring offices are commemorated at lauds but not 2V
-                && self.occ_admits_commemoration(praec, off, true)
-                && (co.praec_wins() || self.seq_admits_commemoration(off, seq))
-        });
-        let comms_from_seq = seq_day.to_commemorate.iter().filter(|&&off| {
-            self.has_first_vespers(off)
-                && (co.seq_wins() || self.praec_admits_commemoration(praec, off))
-        });
-        to_commemorate.extend(chain(comms_from_praec, comms_from_seq).copied());
-        to_commemorate.sort_by(|&c1, &c2| self.compare_commemoration_order(c1, c2));
-        // TODO: remove duplicate commemorations of the same person/octave
-        OrderedVespers {
-            vespers,
-            to_commemorate,
+        if praec.is_of_same_person(seq) {
+            return false;
+        }
+        if praec.feast_rank() == Some(FeastRank::DoubleFirstClass) {
+            return match seq {
+                // TODO: is this true for all days within octaves?
+                Office::OurLadyOnSaturday | Office::WithinOctave { .. } => false,
+                Office::Feast(FeastDetails { rank, .. }) => rank >= FeastRank::Semidouble,
+                _ => true,
+            };
+        }
+        true
+    }
+    fn seq_admits_commemoration(&self, praec: Office, seq: Office) -> bool {
+        assert!(self.has_first_vespers(seq));
+        if !self.has_second_vespers(praec) {
+            return false;
+        }
+        if let Office::GreaterFeria {
+            commemorated_at_vespers: false,
+            ..
+        } = praec
+        {
+            return false;
+        }
+        if praec.is_of_same_person(seq) {
+            return false;
+        }
+        match seq.feast_rank() {
+            Some(FeastRank::DoubleFirstClass) => match praec {
+                Office::Sunday { rank, .. } if rank >= SundayRank::SecondClass => true,
+                Office::Feast(FeastDetails { rank, .. })
+                    if rank >= FeastRank::DoubleSecondClass =>
+                {
+                    true
+                }
+                _ => false,
+            },
+            Some(FeastRank::DoubleSecondClass) => match praec {
+                Office::Sunday { rank, .. } if rank >= SundayRank::SecondClass => true,
+                // TODO: is this true for all octave days?
+                Office::OctaveDay { .. } => true,
+                Office::Feast(FeastDetails { rank, .. }) if rank >= FeastRank::LesserDouble => true,
+                _ => false,
+            },
+            _ => true,
         }
     }
     fn date_of_moveable_feast(&self, id: &str, year: i32) -> Option<usize> {
