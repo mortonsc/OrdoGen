@@ -3,13 +3,11 @@ use serde::Deserialize;
 use std::cmp::Ordering;
 
 mod display;
-mod rubrics1910;
 mod rubrics1939;
 
 #[cfg(test)]
 mod tests;
 
-pub use rubrics1910::Rubrics1910;
 pub use rubrics1939::Rubrics1939;
 
 // TODO:
@@ -302,6 +300,14 @@ impl<'a> Office<'a> {
             false
         }
     }
+    pub fn common_feria() -> Self {
+        Self::Feria {
+            id: None,
+            rank: FeriaRank::Common,
+            has_second_vespers: true,
+            commemorated_at_vespers: true,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -475,7 +481,12 @@ pub trait RubricsSystem {
         let praec = if self.has_second_vespers(praec_day.office_of_day) {
             praec_day.office_of_day
         } else {
-            Office::Empty
+            Office::Feria {
+                id: None,
+                rank: FeriaRank::Common,
+                has_second_vespers: true,
+                commemorated_at_vespers: true,
+            }
         };
         let seq = if self.has_first_vespers(seq_day.office_of_day, seq_is_sunday) {
             seq_day.office_of_day

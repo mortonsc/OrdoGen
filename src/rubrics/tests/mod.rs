@@ -72,7 +72,7 @@ const ASSUMPTION: Office = Office::Feast(ASSUMPTION_DET);
 const VIGIL_ASSUMPTION: Office = Office::Vigil {
     id: "in-vig-assumptionis-bmv",
     feast_details: ASSUMPTION_DET,
-    rank: VigilRank::SecondClass,
+    rank: VigilRank::Common,
 };
 
 const IN_OCT_ASSUMPTION: Office = Office::WithinOctave {
@@ -123,7 +123,7 @@ fn cmp_person() {
 
 #[test]
 fn occurrence() {
-    let rubrics = Rubrics1910;
+    let rubrics = Rubrics1939;
     assert_eq!(
         rubrics.occurrence_outcome(CORPUS_CHRISTI, EMBER_WEDNESDAY, false),
         OccurrenceOutcome {
@@ -156,7 +156,7 @@ fn occurrence() {
         rubrics.occurrence_outcome(EXALT_CRUCIS, OCT_DAY_ASSUMPTION, false),
         OccurrenceOutcome {
             office_to_celebrate: OfficeIs::DeSecundo,
-            loser_is: LoserIs::Translated,
+            loser_is: LoserIs::Commemorated,
         }
     );
     assert_eq!(
@@ -177,7 +177,7 @@ fn occurrence() {
 
 #[test]
 fn concurrence() {
-    let rubrics = Rubrics1910;
+    let rubrics = Rubrics1939;
     assert_eq!(
         rubrics.concurrence_outcome(IN_OCT_ASSUMPTION, IN_OCT_ASSUMPTION, false),
         ConcurrenceOutcome {
@@ -189,7 +189,7 @@ fn concurrence() {
 
 #[test]
 fn consecutive_days_in_octave() {
-    let rubrics = Rubrics1910;
+    let rubrics = Rubrics1939;
 
     let praec_day = OrderedOffice::of_only(IN_OCT_ASSUMPTION);
     let seq_day = praec_day.clone();
@@ -200,7 +200,7 @@ fn consecutive_days_in_octave() {
 
 #[test]
 fn feria_with_greater_feria_comm_simple() {
-    let rubrics = Rubrics1910;
+    let rubrics = Rubrics1939;
 
     let praec_day = OrderedOffice::of_only(Office::Empty);
     let seq_day = rubrics.order_office(vec![EMBER_WEDNESDAY, SIMPLE_FEAST], true);
