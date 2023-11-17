@@ -352,6 +352,23 @@ impl RubricsSystem for Rubrics1939 {
             // special case for Sundays in octaves
             (Office::Sunday { .. }, Office::WithinOctave { .. }) => Ordering::Greater,
             (Office::WithinOctave { .. }, Office::Sunday { .. }) => Ordering::Less,
+            // special case for feasts of the Lord on Sunday
+            (
+                Office::Sunday { .. },
+                Office::Feast(FeastDetails {
+                    rank,
+                    person: Person::OurLord,
+                    ..
+                }),
+            ) if rank >= FeastRank::Semidouble => Ordering::Less,
+            (
+                Office::Feast(FeastDetails {
+                    rank,
+                    person: Person::OurLord,
+                    ..
+                }),
+                Office::Sunday { .. },
+            ) if rank >= FeastRank::Semidouble => Ordering::Greater,
             // TODO potentially: special case that vigil of Epiphany (2 class) cedes to feasts of
             // the Lord; but idk when this would ever occur with a feast that wasn't 1st or 2nd
             // class (and therefore already superseding the vigil by virtue of its rank)

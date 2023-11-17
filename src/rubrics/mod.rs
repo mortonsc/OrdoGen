@@ -10,6 +10,13 @@ mod rubrics1939;
 mod tests;
 
 pub use rubrics1910::Rubrics1910;
+pub use rubrics1939::Rubrics1939;
+
+// TODO:
+// * Anticipating vigils that fall on Sunday
+// * Celebrating omitted Sundays on Saturday
+// * Sundays within octaves have the same rank as the octave
+// * All Souls Day
 
 // convenience functions for comparison chains.
 fn true_is_greater(rhs: bool, lhs: bool) -> Ordering {
