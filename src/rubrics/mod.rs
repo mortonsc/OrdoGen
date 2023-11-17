@@ -48,7 +48,7 @@ impl Default for FeastSubRank {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Deserialize)]
 pub enum OctaveRank {
     Simple,
     Common,
@@ -138,16 +138,15 @@ pub enum FeriaRank {
     // Third class vs second class is a distinction only in 1962 rubrics
     // Common ferias are equivalent to 1962 fourth class ferias
     // Privileged ferias are equivalent to 1962 first class ferias
-    // Special is for the Triduum Sacrum and (pre-55) Easter and Pentecost Monday and Tuesday
     Common,
     ThirdClassAdvent,
     ThirdClass,
     SecondClass,
     Privileged,
-    Special,
+    TriduumSacrum,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq)]
 pub enum VigilRank {
     Common, // Third class in the 1962 rubrics
     SecondClass,
@@ -164,9 +163,10 @@ pub enum Office<'a> {
     },
     Feria {
         id: Option<&'a str>,
-        // false both for Saturdays (which really don't have second vespers at all)
-        // and for a few days which can have second vespers but aren't commemorated at second
-        // vespers if superseded by a feast
+        // false for Saturdays
+        has_second_vespers: bool,
+        // false for days without second vespers and also for certain days which have second
+        // vespers normally, but it isn't commemorated if superseded by a feast
         commemorated_at_vespers: bool,
         rank: FeriaRank,
     },
@@ -174,6 +174,8 @@ pub enum Office<'a> {
         id: &'a str,
         feast_details: FeastDetails<'a>,
         rank: OctaveRank,
+        // the last day within an octave lacks second vespers
+        has_second_vespers: bool,
     },
     OctaveDay {
         id: &'a str,

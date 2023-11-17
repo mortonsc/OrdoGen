@@ -79,6 +79,7 @@ const IN_OCT_ASSUMPTION: Office = Office::WithinOctave {
     id: "inf-oct-assumptionis-bmv",
     feast_details: ASSUMPTION_DET,
     rank: OctaveRank::Common,
+    has_second_vespers: true,
 };
 
 const OCT_DAY_ASSUMPTION: Office = Office::OctaveDay {
@@ -90,12 +91,14 @@ const OCT_DAY_ASSUMPTION: Office = Office::OctaveDay {
 const ADVENT_FERIA: Office = Office::Feria {
     id: None,
     rank: FeriaRank::ThirdClassAdvent,
+    has_second_vespers: true,
     commemorated_at_vespers: true,
 };
 
 const EMBER_WEDNESDAY: Office = Office::Feria {
     id: Some("fer-iv-quat-temp-sept"),
     rank: FeriaRank::SecondClass,
+    has_second_vespers: true,
     commemorated_at_vespers: false,
 };
 

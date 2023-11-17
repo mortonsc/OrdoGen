@@ -12,7 +12,7 @@ impl Rubrics1910 {
                 ..
             } => 16,
             Office::Feria {
-                rank: FeriaRank::Special,
+                rank: FeriaRank::TriduumSacrum,
                 ..
             } => 16,
             Office::Feria {
@@ -228,7 +228,7 @@ impl RubricsSystem for Rubrics1910 {
             Office::Feast(FeastDetails { rank, .. }) => rank < FeastRank::Semidouble,
             Office::OctaveDay { .. } => false,
             Office::Feria {
-                rank: FeriaRank::Special,
+                rank: FeriaRank::TriduumSacrum,
                 ..
             } => false,
             Office::Feria {
