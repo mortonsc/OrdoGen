@@ -1,8 +1,8 @@
 use super::*;
 
-pub struct Rubrics1910;
+pub struct Rubrics1939;
 
-impl Rubrics1910 {
+impl Rubrics1939 {
     // implementing all of these as methods rather than class functions
     // to make it easier later to copy this code for rubrics specified in an external format
     fn precedence_key_occ(&self, off: Office) -> u32 {
@@ -10,78 +10,130 @@ impl Rubrics1910 {
             Office::Sunday {
                 rank: SundayRank::FirstClass,
                 ..
-            } => 16,
+            } => 100,
             Office::Feria {
-                rank: FeriaRank::Special,
+                rank: FeriaRank::Privileged | FeriaRank::Special,
                 ..
-            } => 16,
-            Office::Feria {
-                rank: FeriaRank::Privileged,
+            } => 100,
+            Office::Vigil {
+                rank: VigilRank::FirstClass,
                 ..
-            } => 16,
+            } => 100,
+            Office::WithinOctave {
+                rank: OctaveRank::FirstOrder,
+                ..
+            } => 100,
+            Office::OctaveDay {
+                rank: OctaveRank::FirstOrder,
+                ..
+            } => panic!("there are no 1st order octaves with octave days"),
             Office::Feast(FeastDetails {
                 rank: FeastRank::DoubleFirstClass,
+                is_local: false,
                 ..
-            }) => 15,
+            }) => 95,
+            Office::OctaveDay {
+                rank: OctaveRank::SecondOrder,
+                ..
+            } => 94,
+            Office::Feast(FeastDetails {
+                rank: FeastRank::DoubleFirstClass,
+                is_local: true,
+                ..
+            }) => 93,
+            Office::WithinOctave {
+                rank: OctaveRank::SecondOrder,
+                ..
+            } => 92,
             Office::Sunday {
                 rank: SundayRank::SecondClass,
                 ..
-            } => 14,
+            } => 90,
+            Office::Vigil {
+                rank: VigilRank::SecondClass,
+                ..
+            } => 90,
             Office::Feast(FeastDetails {
                 rank: FeastRank::DoubleSecondClass,
                 ..
-            }) => 13,
-            //TODO: separate different octave types
-            Office::OctaveDay { .. } => 12,
-            Office::Feast(FeastDetails {
-                rank: FeastRank::GreaterDouble,
-                ..
-            }) => 11,
-            Office::Feast(FeastDetails {
-                rank: FeastRank::LesserDouble,
-                ..
-            }) => 10,
+            }) => 80,
             Office::Sunday {
                 rank: SundayRank::Common,
                 ..
-            } => 9,
+            } => 50,
+            Office::OctaveDay {
+                rank: OctaveRank::ThirdOrder,
+                ..
+            } => 47,
+            Office::OctaveDay {
+                rank: OctaveRank::Common,
+                ..
+            } => 46,
+            Office::Feast(FeastDetails {
+                rank: FeastRank::GreaterDouble,
+                ..
+            }) => 45,
+            Office::Feast(FeastDetails {
+                rank: FeastRank::LesserDouble,
+                ..
+            }) => 40,
             Office::Feast(FeastDetails {
                 rank: FeastRank::Semidouble,
                 ..
-            }) => 8,
-            //TODO: separate different octave types
-            Office::WithinOctave { .. } => 7,
-            // pre-1962 rubrics don't distinguish between these ranks of ferias
+            }) => 30,
+            Office::WithinOctave {
+                rank: OctaveRank::ThirdOrder,
+                ..
+            } => 25,
+            Office::WithinOctave {
+                rank: OctaveRank::Common,
+                ..
+            } => 24,
+            // pre-55 doesn't distinguish between these three classes of feria
             Office::Feria {
                 rank: FeriaRank::SecondClass,
                 ..
-            } => 6,
+            } => 20,
             Office::Feria {
                 rank: FeriaRank::ThirdClass,
                 ..
-            } => 6,
+            } => 20,
             Office::Feria {
                 rank: FeriaRank::ThirdClassAdvent,
                 ..
-            } => 6,
-            Office::Vigil { .. } => 5,
-            Office::OurLadyOnSaturday => 4,
+            } => 20,
+            Office::Vigil {
+                rank: VigilRank::Common,
+                ..
+            } => 17,
+            Office::OctaveDay {
+                rank: OctaveRank::Simple,
+                ..
+            } => 15,
+            Office::OurLadyOnSaturday => 12,
             Office::Feast(FeastDetails {
                 rank: FeastRank::Simple,
                 ..
-            }) => 3,
+            }) => 10,
             Office::Feria {
                 rank: FeriaRank::Common,
                 ..
-            } => 2,
-            Office::Feast(FeastDetails {
-                rank: FeastRank::Commemoration,
+            } => 5,
+            Office::WithinOctave {
+                rank: OctaveRank::Simple,
                 ..
-            }) => 1,
+            } => panic!("there are no days within simple octaves"),
             Office::Empty => 0,
+            _ => panic!("unrecognized office: {:?}", off),
         }
     }
     fn precedence_key_conc(&self, is_second_vespers: bool, off: Office) -> u32 {
+        if is_second_vespers {
+            assert!(self.has_second_vespers(off));
+        } else {
+            // it being Sunday or not is irrelevant to 1939 rubrics
+            assert!(self.has_first_vespers(off, false));
+        }
         match (is_second_vespers, off) {
             (
                 _,
@@ -201,7 +253,7 @@ impl Rubrics1910 {
     }
 }
 
-impl RubricsSystem for Rubrics1910 {
+impl RubricsSystem for Rubrics1939 {
     fn has_first_vespers(&self, off: Office, _is_sunday: bool) -> bool {
         matches!(
             off.category(),
@@ -228,11 +280,7 @@ impl RubricsSystem for Rubrics1910 {
             Office::Feast(FeastDetails { rank, .. }) => rank < FeastRank::Semidouble,
             Office::OctaveDay { .. } => false,
             Office::Feria {
-                rank: FeriaRank::Special,
-                ..
-            } => false,
-            Office::Feria {
-                rank: FeriaRank::Privileged,
+                rank: FeriaRank::Special | FeriaRank::Privileged,
                 ..
             } => false,
             _ => true,
@@ -293,9 +341,18 @@ impl RubricsSystem for Rubrics1910 {
         }
     }
     fn compare_precedence_occ(&self, occ1: Office, occ2: Office) -> Ordering {
-        self.precedence_key_occ(occ1)
-            .cmp(&self.precedence_key_occ(occ2))
-            .then(self.compare_feast_precedence(occ1, occ2))
+        match (occ1, occ2) {
+            // special case for Sundays in octaves
+            (Office::Sunday { .. }, Office::WithinOctave { .. }) => Ordering::Greater,
+            (Office::WithinOctave { .. }, Office::Sunday { .. }) => Ordering::Less,
+            // TODO potentially: special case that vigil of Epiphany (2 class) cedes to feasts of
+            // the Lord; but idk when this would ever occur with a feast that wasn't 1st or 2nd
+            // class (and therefore already superseding the vigil by virtue of its rank)
+            _ => self
+                .precedence_key_occ(occ1)
+                .cmp(&self.precedence_key_occ(occ2))
+                .then(self.compare_feast_precedence(occ1, occ2)),
+        }
     }
     fn compare_precedence_conc(&self, praec: Office, seq: Office) -> VespersIs {
         if seq.is_empty() {

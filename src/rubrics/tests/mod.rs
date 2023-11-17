@@ -6,7 +6,6 @@ const CORPUS_CHRISTI: Office = Office::Feast(FeastDetails {
     sub_rank: FeastSubRank::Primary,
     person: Person::OurLord,
     is_patron_or_titular: false,
-    is_privileged: true,
     is_local: false,
     is_moveable: true,
 });
@@ -17,7 +16,6 @@ const THOMAS_AP: Office = Office::Feast(FeastDetails {
     sub_rank: FeastSubRank::Primary,
     person: Person::Apostle,
     is_patron_or_titular: false,
-    is_privileged: false,
     is_local: false,
     is_moveable: false,
 });
@@ -28,7 +26,6 @@ const EXALT_CRUCIS: Office = Office::Feast(FeastDetails {
     sub_rank: FeastSubRank::Primary,
     person: Person::Other,
     is_patron_or_titular: false,
-    is_privileged: false,
     is_local: false,
     is_moveable: false,
 });
@@ -39,7 +36,6 @@ const INVENT_STEPHEN: Office = Office::Feast(FeastDetails {
     sub_rank: FeastSubRank::Secondary,
     person: Person::Other,
     is_patron_or_titular: false,
-    is_privileged: false,
     is_local: false,
     is_moveable: false,
 });
@@ -68,7 +64,6 @@ const ASSUMPTION_DET: FeastDetails = FeastDetails {
     sub_rank: FeastSubRank::Primary,
     person: Person::OurLady,
     is_patron_or_titular: false,
-    is_privileged: false,
     is_local: false,
     is_moveable: false,
 };
@@ -77,29 +72,30 @@ const ASSUMPTION: Office = Office::Feast(ASSUMPTION_DET);
 const VIGIL_ASSUMPTION: Office = Office::Vigil {
     id: "in-vig-assumptionis-bmv",
     feast_details: ASSUMPTION_DET,
+    rank: VigilRank::SecondClass,
 };
 
 const IN_OCT_ASSUMPTION: Office = Office::WithinOctave {
     id: "inf-oct-assumptionis-bmv",
     feast_details: ASSUMPTION_DET,
-    octave_type: OctaveType::Common,
+    rank: OctaveRank::Common,
 };
 
 const OCT_DAY_ASSUMPTION: Office = Office::OctaveDay {
     id: "in-oct-assumptions-bmv",
     feast_details: ASSUMPTION_DET,
-    octave_type: OctaveType::Common,
+    rank: OctaveRank::Common,
 };
 
-const ADVENT_FERIA: Office = Office::GreaterFeria {
+const ADVENT_FERIA: Office = Office::Feria {
     id: None,
-    is_privileged: false,
+    rank: FeriaRank::ThirdClassAdvent,
     commemorated_at_vespers: true,
 };
 
-const EMBER_WEDNESDAY: Office = Office::GreaterFeria {
+const EMBER_WEDNESDAY: Office = Office::Feria {
     id: Some("fer-iv-quat-temp-sept"),
-    is_privileged: false,
+    rank: FeriaRank::SecondClass,
     commemorated_at_vespers: false,
 };
 
@@ -109,7 +105,6 @@ const SIMPLE_FEAST: Office = Office::Feast(FeastDetails {
     sub_rank: FeastSubRank::Primary,
     person: Person::Other,
     is_patron_or_titular: false,
-    is_privileged: false,
     is_local: false,
     is_moveable: false,
 });
@@ -181,7 +176,7 @@ fn occurrence() {
 fn concurrence() {
     let rubrics = Rubrics1910;
     assert_eq!(
-        rubrics.concurrence_outcome(IN_OCT_ASSUMPTION, IN_OCT_ASSUMPTION),
+        rubrics.concurrence_outcome(IN_OCT_ASSUMPTION, IN_OCT_ASSUMPTION, false),
         ConcurrenceOutcome {
             office_to_celebrate: VespersIs::DePraec,
             has_comm: false,
@@ -195,7 +190,7 @@ fn consecutive_days_in_octave() {
 
     let praec_day = OrderedOffice::of_only(IN_OCT_ASSUMPTION);
     let seq_day = praec_day.clone();
-    let ov = rubrics.order_vespers(praec_day, seq_day);
+    let ov = rubrics.order_vespers(praec_day, seq_day, false);
     assert_eq!(ov.vespers, Vespers::SecondVespers(IN_OCT_ASSUMPTION));
     assert!(ov.to_commemorate.is_empty());
 }
@@ -208,7 +203,7 @@ fn feria_with_greater_feria_comm_simple() {
     let seq_day = rubrics.order_office(vec![EMBER_WEDNESDAY, SIMPLE_FEAST], true);
     assert_eq!(seq_day.office_of_day, EMBER_WEDNESDAY);
     assert_eq!(seq_day.to_commemorate[0], SIMPLE_FEAST);
-    let ov = rubrics.order_vespers(praec_day, seq_day);
+    let ov = rubrics.order_vespers(praec_day, seq_day, false);
     assert_eq!(ov.vespers, Vespers::SecondVespers(Office::Empty));
     assert_eq!(ov.to_commemorate[0], SIMPLE_FEAST);
 }

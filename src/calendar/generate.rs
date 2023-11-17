@@ -2,10 +2,9 @@ use chrono::{Datelike, NaiveDate};
 use liturgical::western::easter;
 use time::util::is_leap_year;
 
-use super::{Calendar, LiturgicalDay};
 use crate::rubrics::RubricsSystem;
 
-pub fn temporal_cycle_ids<'a, R: RubricsSystem>(year: i32, _rubrics_system: R) -> Vec<String> {
+pub fn sunday_ids<'a, R: RubricsSystem>(year: i32, _rubrics_system: R) -> Vec<String> {
     let n_days = if is_leap_year(year) { 366 } else { 365 };
     let mut days = vec!["___".to_string(); n_days];
     let jan_1 = NaiveDate::from_ymd_opt(year, 1, 1).expect("year out of range");

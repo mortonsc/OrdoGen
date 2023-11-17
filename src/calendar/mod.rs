@@ -1,7 +1,7 @@
-use serde::Deserialize;
+use chrono::{Datelike, NaiveDate};
 use time::util::is_leap_year;
-use time::{Date, Month};
 
+pub mod calendar1939;
 pub mod generate;
 
 #[cfg(test)]
@@ -24,38 +24,24 @@ const PLACEHOLDER: LiturgicalDay = LiturgicalDay {
     comms_at_vespers: Vec::new(),
 };
 
-pub struct Calendar<'a> {
+pub struct Ordo<'a> {
     year: i32,
     days: Vec<LiturgicalDay<'a>>,
 }
 
-impl<'a> Calendar<'a> {
-    pub fn new<R: RubricsSystem>(year: i32, rubrics_system: R) -> Self {
+impl<'a> Ordo<'a> {
+    pub fn new<R: RubricsSystem>(year: i32, _rubrics_system: R) -> Self {
         let n_days = if is_leap_year(year) { 366 } else { 365 };
         let days = vec![PLACEHOLDER; n_days];
         // TODO
-        Calendar { year, days }
+        Ordo { year, days }
     }
-    pub fn get_day(&self, month: Month, day: u8) -> Option<LiturgicalDay> {
-        let ordinal = Date::from_calendar_date(self.year, month, day)
-            .ok()?
-            .ordinal();
-        Some(self.days[ordinal as usize].clone())
+    pub fn get_day(&self, month: u32, day: u32) -> Option<LiturgicalDay> {
+        let ordinal = NaiveDate::from_ymd_opt(self.year, month, day)?.ordinal0() as usize;
+        Some(self.days[ordinal].clone())
     }
 }
-
-#[derive(Debug, Deserialize, PartialEq, Eq)]
-pub struct OctaveDetails<'a> {
-    pub id: &'a str,
-    pub octave_type: OctaveType,
-}
-
-#[derive(Debug, Deserialize, PartialEq, Eq)]
-pub struct CalendarEntry<'a> {
-    #[serde(flatten)]
-    pub feast_details: FeastDetails<'a>,
-    #[serde(default)]
-    pub vigil: Option<&'a str>,
-    #[serde(default)]
-    pub octave: Option<OctaveDetails<'a>>,
+pub trait Calendar<'a> {
+    type RS: RubricsSystem;
+    fn raw_ordo(&self, year: i32) -> Vec<Vec<Office<'a>>>;
 }
