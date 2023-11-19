@@ -11,10 +11,7 @@ mod tests;
 pub use rubrics1939::Rubrics1939;
 
 // TODO:
-// * Anticipating vigils that fall on Sunday
-// * Celebrating omitted Sundays on Saturday
-// * Sundays within octaves have the same rank as the octave
-// * All Souls Day
+// * The Purification is a feast both of our Lord and our Lady
 
 // convenience functions for comparison chains.
 fn true_is_greater(rhs: bool, lhs: bool) -> Ordering {
@@ -29,7 +26,7 @@ fn false_is_greater(rhs: bool, lhs: bool) -> Ordering {
     true_is_greater(rhs, lhs).reverse()
 }
 
-// listed from lowest-to-highest so the #derive works
+// listed from lowest-to-highest so the ordering is correct
 #[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Deserialize)]
 pub enum FeastRank {
     Commemoration,
@@ -65,7 +62,7 @@ pub enum OctaveRank {
 #[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Deserialize)]
 pub enum Person {
     Other,
-    Doctor,
+    Evangelist,
     Apostle,
     Joseph,
     JohnBaptist,
@@ -84,6 +81,7 @@ impl Default for Person {
 #[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq)]
 pub enum SundayRank {
     Common,
+    WithinOctave(OctaveRank),
     SecondClass,
     FirstClass,
 }
@@ -144,11 +142,12 @@ pub enum FeriaRank {
     // Common ferias are equivalent to 1962 fourth class ferias
     // Privileged ferias are equivalent to 1962 first class ferias
     Common,
+    AnticipatedSunday,
     ThirdClassAdvent,
     ThirdClass,
     SecondClass,
     Privileged,
-    TriduumSacrum,
+    DoubleFirstClass,
 }
 
 #[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq)]
@@ -176,57 +175,31 @@ pub enum Office<'a> {
         rank: FeriaRank,
     },
     WithinOctave {
-        id: &'a str,
         feast_details: FeastDetails<'a>,
         rank: OctaveRank,
         // the last day within an octave lacks second vespers
         has_second_vespers: bool,
     },
     OctaveDay {
-        id: &'a str,
         feast_details: FeastDetails<'a>,
         rank: OctaveRank,
     },
     Vigil {
-        id: &'a str,
         feast_details: FeastDetails<'a>,
         rank: VigilRank,
     },
+    AllSouls,
     OurLadyOnSaturday,
-    // used both for ordinary ferias per annum and as a placeholder for an office that doesn't exist
-    Empty,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum OfficeCategory {
-    Feast,
-    Sunday,
-    Feria,
-    WithinOctave,
-    OctaveDay,
-    Vigil,
-    OurLadyOnSaturday,
+    // used as a placeholder for an office that doesn't exist
     Empty,
 }
 
 impl<'a> Office<'a> {
-    pub fn category(self) -> OfficeCategory {
-        match self {
-            Self::Feast(_) => OfficeCategory::Feast,
-            Self::Sunday { .. } => OfficeCategory::Sunday,
-            Self::Feria { .. } => OfficeCategory::Feria,
-            Self::WithinOctave { .. } => OfficeCategory::WithinOctave,
-            Self::OctaveDay { .. } => OfficeCategory::OctaveDay,
-            Self::Vigil { .. } => OfficeCategory::Vigil,
-            Self::OurLadyOnSaturday => OfficeCategory::OurLadyOnSaturday,
-            Self::Empty => OfficeCategory::Empty,
-        }
-    }
     pub fn is_feast(self) -> bool {
-        self.category() == OfficeCategory::Feast
+        matches!(self, Self::Feast(_))
     }
     pub fn is_sunday(self) -> bool {
-        self.category() == OfficeCategory::Sunday
+        matches!(self, Self::Sunday { .. })
     }
     pub fn feast_rank(self) -> Option<FeastRank> {
         if let Self::Feast(FeastDetails { rank, .. }) = self {
@@ -235,14 +208,11 @@ impl<'a> Office<'a> {
             None
         }
     }
-    pub fn is_ferial(self) -> bool {
-        matches!(
-            self.category(),
-            OfficeCategory::Feria | OfficeCategory::Empty
-        )
+    pub fn is_feria(self) -> bool {
+        matches!(self, Self::Feria { .. })
     }
     pub fn is_vigil(self) -> bool {
-        self.category() == OfficeCategory::Vigil
+        matches!(self, Self::Vigil { .. })
     }
     pub fn is_greater_feria(self) -> bool {
         if let Self::Feria { rank, .. } = self {
@@ -385,7 +355,6 @@ impl ConcurrenceOutcome {
 pub struct OrderedOffice<'a> {
     pub office_of_day: Office<'a>,
     pub to_commemorate: Vec<Office<'a>>,
-    pub to_translate: Vec<Office<'a>>,
 }
 
 impl<'a> OrderedOffice<'a> {
@@ -393,7 +362,6 @@ impl<'a> OrderedOffice<'a> {
         Self {
             office_of_day: off,
             to_commemorate: Vec::new(),
-            to_translate: Vec::new(),
         }
     }
 }
@@ -438,15 +406,17 @@ pub trait RubricsSystem {
         &self,
         occs: Vec<Office<'a>>,
         allow_translation: bool,
-    ) -> OrderedOffice<'a> {
+    ) -> (OrderedOffice<'a>, Vec<Office<'a>>) {
         let mut to_commemorate: Vec<Office<'a>> = Vec::new();
         let mut to_translate: Vec<Office<'a>> = Vec::new();
         if occs.is_empty() {
-            return OrderedOffice {
-                office_of_day: Office::Empty,
-                to_commemorate,
+            return (
+                OrderedOffice {
+                    office_of_day: Office::Empty,
+                    to_commemorate,
+                },
                 to_translate,
-            };
+            );
         }
         let mut occs = occs.clone();
         occs.sort_by(|&occ1, &occ2| self.compare_precedence_occ(occ1, occ2));
@@ -466,11 +436,13 @@ pub trait RubricsSystem {
             }
         }
         to_commemorate.sort_by(|&c1, &c2| self.compare_commemoration_order(c1, c2));
-        OrderedOffice {
-            office_of_day,
-            to_commemorate,
+        (
+            OrderedOffice {
+                office_of_day,
+                to_commemorate,
+            },
             to_translate,
-        }
+        )
     }
     fn order_vespers<'a>(
         &self,
@@ -481,11 +453,14 @@ pub trait RubricsSystem {
         let praec = if self.has_second_vespers(praec_day.office_of_day) {
             praec_day.office_of_day
         } else {
+            // this covers the case where praec has no 2V and seq has no 1V,
+            // which happens in pre-55 rubrics when a simple feast is followed by a feria
+            // (the rubrics actually analyze this case as the following feria gaining 1st vespers)
             Office::Feria {
                 id: None,
                 rank: FeriaRank::Common,
                 has_second_vespers: true,
-                commemorated_at_vespers: true,
+                commemorated_at_vespers: false,
             }
         };
         let seq = if self.has_first_vespers(seq_day.office_of_day, seq_is_sunday) {
@@ -514,6 +489,10 @@ pub trait RubricsSystem {
         to_commemorate.extend(chain(comms_from_praec, comms_from_seq).copied());
         to_commemorate.sort_by(|&c1, &c2| self.compare_commemoration_order(c1, c2));
         // TODO: remove duplicate commemorations of the same person/octave
+        // TODO: special case: if the office of praec is the last day within an octave
+        // and the octave day is only commemorated on the following day
+        // then the commemoration at vespers is 2V of the day within the octave
+        // rather than 1V of the octave day
         OrderedVespers {
             vespers,
             to_commemorate,

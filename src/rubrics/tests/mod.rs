@@ -70,20 +70,17 @@ const ASSUMPTION_DET: FeastDetails = FeastDetails {
 
 const ASSUMPTION: Office = Office::Feast(ASSUMPTION_DET);
 const VIGIL_ASSUMPTION: Office = Office::Vigil {
-    id: "in-vig-assumptionis-bmv",
     feast_details: ASSUMPTION_DET,
     rank: VigilRank::Common,
 };
 
 const IN_OCT_ASSUMPTION: Office = Office::WithinOctave {
-    id: "inf-oct-assumptionis-bmv",
     feast_details: ASSUMPTION_DET,
     rank: OctaveRank::Common,
     has_second_vespers: true,
 };
 
 const OCT_DAY_ASSUMPTION: Office = Office::OctaveDay {
-    id: "in-oct-assumptions-bmv",
     feast_details: ASSUMPTION_DET,
     rank: OctaveRank::Common,
 };
@@ -203,7 +200,7 @@ fn feria_with_greater_feria_comm_simple() {
     let rubrics = Rubrics1939;
 
     let praec_day = OrderedOffice::of_only(Office::Empty);
-    let seq_day = rubrics.order_office(vec![EMBER_WEDNESDAY, SIMPLE_FEAST], true);
+    let (seq_day, _) = rubrics.order_office(vec![EMBER_WEDNESDAY, SIMPLE_FEAST], true);
     assert_eq!(seq_day.office_of_day, EMBER_WEDNESDAY);
     assert_eq!(seq_day.to_commemorate[0], SIMPLE_FEAST);
     let ov = rubrics.order_vespers(praec_day, seq_day, false);
