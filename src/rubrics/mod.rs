@@ -1,5 +1,5 @@
 use itertools::chain;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 
 mod display;
@@ -27,7 +27,7 @@ fn false_is_greater(rhs: bool, lhs: bool) -> Ordering {
 }
 
 // listed from lowest-to-highest so the ordering is correct
-#[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Serialize, Deserialize)]
 pub enum FeastRank {
     Commemoration,
     Simple,
@@ -38,7 +38,7 @@ pub enum FeastRank {
     DoubleFirstClass,
 }
 
-#[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Serialize, Deserialize)]
 pub enum FeastSubRank {
     Secondary,
     Primary,
@@ -50,7 +50,7 @@ impl Default for FeastSubRank {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Serialize, Deserialize)]
 pub enum OctaveRank {
     Simple,
     Common,
@@ -59,9 +59,10 @@ pub enum OctaveRank {
     FirstOrder,
 }
 
-#[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Person {
     Other,
+    Doctor,
     Evangelist,
     Apostle,
     Joseph,
@@ -78,7 +79,7 @@ impl Default for Person {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SundayRank {
     Common,
     WithinOctave(OctaveRank),
@@ -86,7 +87,7 @@ pub enum SundayRank {
     FirstClass,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FeastDetails<'a> {
     pub id: &'a str,
     pub rank: FeastRank,
@@ -148,12 +149,13 @@ impl<'a> FeastDetails<'a> {
         self.octave = Some(rank);
         self
     }
+    // this technical meaning of "solemn" is relevant to determining feast precedence
     pub fn is_solemn(self) -> bool {
         self.is_feriata || self.octave.is_some()
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Serialize, Deserialize)]
 pub enum FeriaRank {
     // Third class vs second class is a distinction only in 1962 rubrics
     // Common ferias are equivalent to 1962 fourth class ferias
@@ -167,14 +169,14 @@ pub enum FeriaRank {
     DoubleFirstClass,
 }
 
-#[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Serialize, Deserialize)]
 pub enum VigilRank {
     Common, // Third class in the 1962 rubrics
     SecondClass,
     FirstClass,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Office<'a> {
     Feast(FeastDetails<'a>),
     Sunday {
@@ -295,6 +297,25 @@ impl<'a> Office<'a> {
             false
         }
     }
+    pub fn is_feast_of_the_lord(self) -> bool {
+        matches!(self.person(), Some(Person::OurLord))
+    }
+    pub fn named_feria(id: &'a str, rank: FeriaRank, has_second_vespers: bool) -> Self {
+        Self::Feria {
+            id: Some(id),
+            rank,
+            has_second_vespers,
+            commemorated_at_vespers: has_second_vespers,
+        }
+    }
+    pub fn unnamed_feria(rank: FeriaRank, has_second_vespers: bool) -> Self {
+        Self::Feria {
+            id: None,
+            rank,
+            has_second_vespers,
+            commemorated_at_vespers: has_second_vespers,
+        }
+    }
     pub fn common_feria() -> Self {
         Self::Feria {
             id: None,
@@ -302,6 +323,23 @@ impl<'a> Office<'a> {
             has_second_vespers: true,
             commemorated_at_vespers: true,
         }
+    }
+    pub fn day_within_octave(self) -> Option<Self> {
+        let feast_details = self.feast_details()?;
+        let rank = feast_details.octave?;
+        Some(Self::WithinOctave {
+            feast_details,
+            rank,
+            has_second_vespers: true,
+        })
+    }
+    pub fn octave_day(self) -> Option<Self> {
+        let feast_details = self.feast_details()?;
+        let rank = feast_details.octave?;
+        Some(Self::OctaveDay {
+            feast_details,
+            rank,
+        })
     }
 }
 
@@ -442,7 +480,7 @@ pub trait RubricsSystem {
     fn praec_admits_commemoration(&self, praec: Office, seq: Office, seq_is_sunday: bool) -> bool;
     // assuming Vespers is of seq, returns true if praec is to be commemorated
     fn seq_admits_commemoration(&self, praec: Office, seq: Office, seq_is_sunday: bool) -> bool;
-    fn order_office<'a>(&self, occs: Vec<Office<'a>>) -> (OrderedOffice<'a>, Vec<Office<'a>>) {
+    fn order_office<'a>(&self, occs: &[Office<'a>]) -> (OrderedOffice<'a>, Vec<Office<'a>>) {
         let mut to_commemorate: Vec<Office<'a>> = Vec::new();
         let mut to_translate: Vec<Office<'a>> = Vec::new();
         if occs.is_empty() {
@@ -454,7 +492,7 @@ pub trait RubricsSystem {
                 to_translate,
             );
         }
-        let mut occs = occs.clone();
+        let mut occs = occs.to_vec();
         occs.sort_by(|&occ1, &occ2| self.compare_precedence_occ(occ1, occ2));
         let office_of_day: Office = occs.pop().unwrap();
         // reverse because we want to deal with higher-ranked things first
@@ -480,8 +518,8 @@ pub trait RubricsSystem {
     }
     fn order_vespers<'a>(
         &self,
-        praec_day: OrderedOffice<'a>,
-        seq_day: OrderedOffice<'a>,
+        praec_day: &OrderedOffice<'a>,
+        seq_day: &OrderedOffice<'a>,
         seq_is_sunday: bool,
     ) -> OrderedVespers<'a> {
         let praec = if self.has_second_vespers(praec_day.office_of_day) {
@@ -510,7 +548,7 @@ pub trait RubricsSystem {
         } else if co.seq_wins() && co.has_comm {
             to_commemorate.push(VespersComm::SecondVespers(praec));
         }
-        let comms_from_praec = praec_day
+        let comms_from_praec: Vec<VespersComm<'a>> = praec_day
             .to_commemorate
             .iter()
             .filter(|&&off| {
@@ -519,13 +557,18 @@ pub trait RubricsSystem {
                     && self.occ_admits_commemoration(praec, off, true)
                     && (co.praec_wins() || self.seq_admits_commemoration(off, seq, seq_is_sunday))
             })
-            .map(|&off| VespersComm::SecondVespers(off));
-        let comms_from_seq = seq_day
+            .map(|&off| VespersComm::SecondVespers(off))
+            .collect();
+        let comms_from_seq: Vec<VespersComm<'a>> = seq_day
             .to_commemorate
             .iter()
             .filter(|&&off| {
                 self.has_first_vespers(off, seq_is_sunday)
                 && (co.seq_wins() || self.praec_admits_commemoration(praec, off, seq_is_sunday))
+                // (pre-55) when two consecutive days within octaves are commemorated,
+                // the commemoration at Vespers is 2V of the first day
+                // in 1962 days in octaves don't have 1V so this does nothing
+                && !(matches!(off, Office::WithinOctave { .. }) && comms_from_praec.iter().any(|c| c.office().is_of_same_feast(off)))
                 // this takes care of one specific case, where a day within an octave is followed
                 // by the octave day, but the octave day is superseded by a feast
                 // in which case (in pre-55 rubrics) the commemoration at 1V of the feast is taken
@@ -534,11 +577,17 @@ pub trait RubricsSystem {
                 // Corpus Christi
                 && !off.is_of_same_feast(praec)
             })
-            .map(|&off| VespersComm::FirstVespers(off));
+            .map(|&off| VespersComm::FirstVespers(off))
+            .collect();
+
         to_commemorate.extend(chain(comms_from_praec, comms_from_seq));
         // TODO: is there a specific ordering that should hold between 1V and 2V commemorations?
         to_commemorate
             .sort_by(|&c1, &c2| self.compare_commemoration_order(c1.office(), c2.office()));
+        // remove commemorations of the same subject
+        // assumes that the commemoration that comes later is the one that should be removed
+        // in practice this doesn't come up much because we've already covered all the cases with
+        // octaves above
         let mut to_commemorate_final: Vec<VespersComm<'a>> = Vec::new();
         for comm in to_commemorate {
             if !to_commemorate_final

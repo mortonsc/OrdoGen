@@ -1,6 +1,7 @@
 use chrono::{Datelike, NaiveDate};
 
 pub mod calendar;
+pub mod ordo;
 pub mod rubrics;
 
 fn test_sundays(year: i32) {

@@ -247,6 +247,20 @@ impl Rubrics1939 {
         off.feast_details()
             .map_or(false, |fd| fd.rank >= FeastRank::DoubleSecondClass)
     }
+    pub fn admits_anticipated_sunday(&self, off: Office) -> bool {
+        // Sundays cannot be anticipated to "days of 9 lessons"
+        match off {
+            Office::Feast(FeastDetails { rank, .. }) => rank <= FeastRank::Simple,
+            Office::WithinOctave { .. } => false,
+            Office::OctaveDay { rank, .. } => rank > OctaveRank::Simple,
+            Office::Feria {
+                rank: FeriaRank::Common,
+                ..
+            } => true,
+            Office::OurLadyOnSaturday => true,
+            _ => panic!("trying to anticipate a Sunday to unexpected day: {:?}", off),
+        }
+    }
 }
 
 impl RubricsSystem for Rubrics1939 {

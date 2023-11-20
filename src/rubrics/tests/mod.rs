@@ -51,7 +51,7 @@ const VIGIL_ASSUMPTION: Office = Office::Vigil {
     rank: VigilRank::Common,
 };
 
-const IN_OCT_ASSUMPTION: Office = Office::WithinOctave {
+const INF_OCT_ASSUMPTION: Office = Office::WithinOctave {
     feast_details: ASSUMPTION_DET,
     rank: OctaveRank::Common,
     has_second_vespers: true,
@@ -143,7 +143,7 @@ fn occurrence() {
         }
     );
     assert_eq!(
-        rubrics.occurrence_outcome(IN_OCT_ASSUMPTION, OUR_LADY_ON_SATURDAY, false),
+        rubrics.occurrence_outcome(INF_OCT_ASSUMPTION, OUR_LADY_ON_SATURDAY, false),
         OccurrenceOutcome {
             office_to_celebrate: OfficeIs::DePrimo,
             loser_is: LoserIs::Omitted,
@@ -155,7 +155,7 @@ fn occurrence() {
 fn concurrence() {
     let rubrics = Rubrics1939;
     assert_eq!(
-        rubrics.concurrence_outcome(IN_OCT_ASSUMPTION, IN_OCT_ASSUMPTION, false),
+        rubrics.concurrence_outcome(INF_OCT_ASSUMPTION, INF_OCT_ASSUMPTION, false),
         ConcurrenceOutcome {
             office_to_celebrate: VespersIs::DePraec,
             has_comm: false,
@@ -167,10 +167,10 @@ fn concurrence() {
 fn consecutive_days_in_octave() {
     let rubrics = Rubrics1939;
 
-    let praec_day = OrderedOffice::of_only(IN_OCT_ASSUMPTION);
+    let praec_day = OrderedOffice::of_only(INF_OCT_ASSUMPTION);
     let seq_day = praec_day.clone();
     let ov = rubrics.order_vespers(praec_day, seq_day, false);
-    assert_eq!(ov.vespers, Vespers::SecondVespers(IN_OCT_ASSUMPTION));
+    assert_eq!(ov.vespers, Vespers::SecondVespers(INF_OCT_ASSUMPTION));
     assert!(ov.to_commemorate.is_empty());
 }
 

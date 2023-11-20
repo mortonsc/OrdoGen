@@ -4,6 +4,8 @@ use time::util::is_leap_year;
 use super::*;
 use crate::rubrics::*;
 
+mod temporal_cycle;
+
 struct Calendar1939;
 
 impl<'a> Calendar1939 {
