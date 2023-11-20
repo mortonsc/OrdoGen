@@ -235,14 +235,14 @@ impl Rubrics1939 {
         if let (Some(fd1), Some(fd2)) = (off1.feast_details(), off2.feast_details()) {
             fd1.rank
                 .cmp(&fd2.rank)
+                .then(true_is_greater(fd1.is_solemn(), fd2.is_solemn()))
+                .then(fd1.sub_rank.cmp(&fd2.sub_rank))
                 .then(fd1.person.cmp(&fd2.person))
                 .then(true_is_greater(fd1.is_local, fd2.is_local))
-                .then(false_is_greater(fd1.is_moveable, fd2.is_moveable))
         } else {
             Ordering::Equal
         }
     }
-    // TODO: check
     fn is_translated(&self, off: Office) -> bool {
         off.feast_details()
             .map_or(false, |fd| fd.rank >= FeastRank::DoubleSecondClass)
@@ -419,7 +419,7 @@ impl RubricsSystem for Rubrics1939 {
         if !loser_wants_commemoration {
             return false;
         }
-        if winner.is_of_same_person(loser) {
+        if winner.is_of_same_subject(loser) {
             return false;
         }
         if winner.is_greater_feria() && loser.is_vigil() {
@@ -467,7 +467,7 @@ impl RubricsSystem for Rubrics1939 {
         if !self.has_first_vespers(seq, seq_is_sunday) {
             return false;
         }
-        if praec.is_of_same_person(seq) {
+        if praec.is_of_same_subject(seq) {
             return false;
         }
         if matches!(
@@ -501,7 +501,7 @@ impl RubricsSystem for Rubrics1939 {
         {
             return false;
         }
-        if praec.is_of_same_person(seq) {
+        if praec.is_of_same_subject(seq) {
             return false;
         }
         match seq.feast_rank() {

@@ -1,44 +1,25 @@
 use super::*;
 
-const CORPUS_CHRISTI: Office = Office::Feast(FeastDetails {
-    id: "corpus-christi",
-    rank: FeastRank::DoubleFirstClass,
-    sub_rank: FeastSubRank::Primary,
-    person: Person::OurLord,
-    is_patron_or_titular: false,
-    is_local: false,
-    is_moveable: true,
-});
+const CORPUS_CHRISTI: Office = Office::Feast(
+    FeastDetails::new("ssmi-corporis-christi", FeastRank::DoubleFirstClass)
+        .with_person(Person::OurLord)
+        .make_moveable()
+        .make_feriata(),
+);
 
-const THOMAS_AP: Office = Office::Feast(FeastDetails {
-    id: "thomas-ap",
-    rank: FeastRank::DoubleFirstClass,
-    sub_rank: FeastSubRank::Primary,
-    person: Person::Apostle,
-    is_patron_or_titular: false,
-    is_local: false,
-    is_moveable: false,
-});
+const THOMAS_AP: Office = Office::Feast(
+    FeastDetails::new("s-thomas-ap", FeastRank::DoubleSecondClass).with_person(Person::Apostle),
+);
 
-const EXALT_CRUCIS: Office = Office::Feast(FeastDetails {
-    id: "exalt-crucis",
-    rank: FeastRank::GreaterDouble,
-    sub_rank: FeastSubRank::Primary,
-    person: Person::Other,
-    is_patron_or_titular: false,
-    is_local: false,
-    is_moveable: false,
-});
+const EXALT_CRUCIS: Office = Office::Feast(FeastDetails::new(
+    "in-exaltatione-s-crucis",
+    FeastRank::GreaterDouble,
+));
 
-const INVENT_STEPHEN: Office = Office::Feast(FeastDetails {
-    id: "invent-stephan",
-    rank: FeastRank::Semidouble,
-    sub_rank: FeastSubRank::Secondary,
-    person: Person::Other,
-    is_patron_or_titular: false,
-    is_local: false,
-    is_moveable: false,
-});
+const INVENT_STEPHEN: Office = Office::Feast(
+    FeastDetails::new("inventio-s-stephani-protomartyris", FeastRank::Semidouble)
+        .with_sub_rank(FeastSubRank::Secondary),
+);
 
 const DOM_15_POST_PENT: Office = Office::Sunday {
     id: "dom-15-post-pent",
@@ -58,15 +39,11 @@ const DOM_SEPTUAGESIMA: Office = Office::Sunday {
     rank: SundayRank::SecondClass,
 };
 
-const ASSUMPTION_DET: FeastDetails = FeastDetails {
-    id: "in-assumptione-bmv",
-    rank: FeastRank::DoubleFirstClass,
-    sub_rank: FeastSubRank::Primary,
-    person: Person::OurLady,
-    is_patron_or_titular: false,
-    is_local: false,
-    is_moveable: false,
-};
+const ASSUMPTION_DET: FeastDetails =
+    FeastDetails::new("in-assumptione-bmv", FeastRank::DoubleFirstClass)
+        .with_person(Person::OurLady)
+        .with_octave(OctaveRank::Common)
+        .make_feriata();
 
 const ASSUMPTION: Office = Office::Feast(ASSUMPTION_DET);
 const VIGIL_ASSUMPTION: Office = Office::Vigil {
@@ -107,6 +84,8 @@ const SIMPLE_FEAST: Office = Office::Feast(FeastDetails {
     is_patron_or_titular: false,
     is_local: false,
     is_moveable: false,
+    octave: None,
+    is_feriata: false,
 });
 
 const OUR_LADY_ON_SATURDAY: Office = Office::OurLadyOnSaturday;
@@ -200,10 +179,13 @@ fn feria_with_greater_feria_comm_simple() {
     let rubrics = Rubrics1939;
 
     let praec_day = OrderedOffice::of_only(Office::Empty);
-    let (seq_day, _) = rubrics.order_office(vec![EMBER_WEDNESDAY, SIMPLE_FEAST], true);
+    let (seq_day, _) = rubrics.order_office(vec![EMBER_WEDNESDAY, SIMPLE_FEAST]);
     assert_eq!(seq_day.office_of_day, EMBER_WEDNESDAY);
     assert_eq!(seq_day.to_commemorate[0], SIMPLE_FEAST);
     let ov = rubrics.order_vespers(praec_day, seq_day, false);
     assert_eq!(ov.vespers, Vespers::SecondVespers(Office::Empty));
-    assert_eq!(ov.to_commemorate[0], SIMPLE_FEAST);
+    assert_eq!(
+        ov.to_commemorate[0],
+        VespersComm::FirstVespers(SIMPLE_FEAST)
+    );
 }

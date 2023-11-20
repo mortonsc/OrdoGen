@@ -100,6 +100,10 @@ pub struct FeastDetails<'a> {
     pub is_local: bool,
     #[serde(default)]
     pub is_moveable: bool,
+    #[serde(default)]
+    pub octave: Option<OctaveRank>,
+    #[serde(default)]
+    pub is_feriata: bool,
 }
 
 impl<'a> FeastDetails<'a> {
@@ -112,27 +116,40 @@ impl<'a> FeastDetails<'a> {
             is_patron_or_titular: false,
             is_local: false,
             is_moveable: false,
+            octave: None,
+            is_feriata: false,
         }
     }
-    pub fn with_person(mut self, person: Person) -> Self {
+    pub const fn with_person(mut self, person: Person) -> Self {
         self.person = person;
         self
     }
-    pub fn with_sub_rank(mut self, sub_rank: FeastSubRank) -> Self {
+    pub const fn with_sub_rank(mut self, sub_rank: FeastSubRank) -> Self {
         self.sub_rank = sub_rank;
         self
     }
-    pub fn make_patron_or_titular(mut self) -> Self {
+    pub const fn make_patron_or_titular(mut self) -> Self {
         self.is_patron_or_titular = true;
         self
     }
-    pub fn make_local(mut self) -> Self {
+    pub const fn make_local(mut self) -> Self {
         self.is_local = true;
         self
     }
-    pub fn make_moveable(mut self) -> Self {
+    pub const fn make_moveable(mut self) -> Self {
         self.is_moveable = true;
         self
+    }
+    pub const fn make_feriata(mut self) -> Self {
+        self.is_feriata = true;
+        self
+    }
+    pub const fn with_octave(mut self, rank: OctaveRank) -> Self {
+        self.octave = Some(rank);
+        self
+    }
+    pub fn is_solemn(self) -> bool {
+        self.is_feriata || self.octave.is_some()
     }
 }
 
@@ -252,20 +269,28 @@ impl<'a> Office<'a> {
             _ => Some(self.assoc_feast_details()?.person),
         }
     }
+    pub fn is_of_same_feast(self, other: Self) -> bool {
+        if let (Some(fd1), Some(fd2)) = (self.assoc_feast_details(), other.assoc_feast_details()) {
+            fd1.id == fd2.id
+        } else {
+            false
+        }
+    }
     // TODO: this doesn't fully deal with separate feasts of the same person
     // if the person doesn't have an explicit Person variant
-    // in practice though that doesn't come up
-    pub fn is_of_same_person(self, other: Self) -> bool {
+    // TODO: in particular there probably needs to be a special case for the commemoration of St
+    // Paul, which isn't commemorated at 2V of the Sts Peter and Paul the preceding day
+    pub fn is_of_same_subject(self, other: Self) -> bool {
         // two days in the octave of the same feast are obviously of the same person
         // (and we can't always tell this by just looking at the Person field)
-        if let (Some(fd1), Some(fd2)) = (self.assoc_feast_details(), other.assoc_feast_details()) {
-            if fd1.id == fd2.id {
-                return true;
-            }
+        if self.is_of_same_feast(other) {
+            return true;
         }
         if let (Some(p1), Some(p2)) = (self.person(), other.person()) {
             // the Persons lower-ranked than Joseph are categories, not specific persons
-            p1 >= Person::Joseph && p1 == p2
+            // while different feasts of the Lord are considered to have different subjects
+            // as they deal with different mysteries
+            p1 >= Person::Joseph && p1 != Person::OurLord && p1 == p2
         } else {
             false
         }
@@ -373,11 +398,25 @@ pub enum Vespers<'a> {
     SplitAtCap(Office<'a>, Office<'a>),
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum VespersComm<'a> {
+    FirstVespers(Office<'a>),
+    SecondVespers(Office<'a>),
+}
+
+impl<'a> VespersComm<'a> {
+    pub fn office(self) -> Office<'a> {
+        match self {
+            Self::FirstVespers(off) => off,
+            Self::SecondVespers(off) => off,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct OrderedVespers<'a> {
     pub vespers: Vespers<'a>,
-    // TODO: need to mark whether each of these is first or second vespers
-    pub to_commemorate: Vec<Office<'a>>,
+    pub to_commemorate: Vec<VespersComm<'a>>,
 }
 
 pub trait RubricsSystem {
@@ -397,16 +436,13 @@ pub trait RubricsSystem {
     fn compare_precedence_conc(&self, praec: Office, seq: Office) -> VespersIs;
     fn compare_commemoration_order(&self, comm1: Office, comm2: Office) -> Ordering;
     // assuming the office of the day is winner, returns true iff loser is to be commemorated
+    // at Lauds (at_vespers == false) or at Vespers (at_vespers == true)
     fn occ_admits_commemoration(&self, winner: Office, loser: Office, at_vespers: bool) -> bool;
-    // assuming vespers is of praec, returns true if seq is to be commemorated
+    // assuming Vespers is of praec, returns true if seq is to be commemorated
     fn praec_admits_commemoration(&self, praec: Office, seq: Office, seq_is_sunday: bool) -> bool;
-    // assuming vespers is of seq, returns true if praec is to be commemorated
+    // assuming Vespers is of seq, returns true if praec is to be commemorated
     fn seq_admits_commemoration(&self, praec: Office, seq: Office, seq_is_sunday: bool) -> bool;
-    fn order_office<'a>(
-        &self,
-        occs: Vec<Office<'a>>,
-        allow_translation: bool,
-    ) -> (OrderedOffice<'a>, Vec<Office<'a>>) {
+    fn order_office<'a>(&self, occs: Vec<Office<'a>>) -> (OrderedOffice<'a>, Vec<Office<'a>>) {
         let mut to_commemorate: Vec<Office<'a>> = Vec::new();
         let mut to_translate: Vec<Office<'a>> = Vec::new();
         if occs.is_empty() {
@@ -425,13 +461,11 @@ pub trait RubricsSystem {
         for &occ in occs.iter().rev() {
             let outcome = self.occurrence_outcome(office_of_day, occ, false);
             assert_eq!(outcome.office_to_celebrate, OfficeIs::DePrimo);
-            if outcome.loser_is == LoserIs::Translated && allow_translation {
+            if outcome.loser_is == LoserIs::Translated {
                 to_translate.push(occ);
-            } else if (outcome.loser_is == LoserIs::Commemorated
-                || outcome.loser_is == LoserIs::Translated)
-                && to_commemorate.iter().all(|c| !c.is_of_same_person(occ))
+            } else if outcome.loser_is == LoserIs::Commemorated
+                && to_commemorate.iter().all(|c| !c.is_of_same_subject(occ))
             {
-                // ASSUMPTION: any feast that would be translated is commemorated if it can't be
                 to_commemorate.push(occ);
             }
         }
@@ -468,34 +502,56 @@ pub trait RubricsSystem {
         } else {
             Office::Empty
         };
-        let mut to_commemorate: Vec<Office<'a>> = Vec::new();
+        let mut to_commemorate: Vec<VespersComm<'a>> = Vec::new();
         let co = self.concurrence_outcome(praec, seq, seq_is_sunday);
         let vespers = co.office_to_celebrate.applied_to(praec, seq);
         if co.praec_wins() && co.has_comm {
-            to_commemorate.push(seq);
+            to_commemorate.push(VespersComm::FirstVespers(seq));
         } else if co.seq_wins() && co.has_comm {
-            to_commemorate.push(praec);
+            to_commemorate.push(VespersComm::SecondVespers(praec));
         }
-        let comms_from_praec = praec_day.to_commemorate.iter().filter(|&&off| {
-            self.has_second_vespers(off)
-                // extra check because some occuring offices are commemorated at lauds but not 2V
-                && self.occ_admits_commemoration(praec, off, true)
-                && (co.praec_wins() || self.seq_admits_commemoration(off, seq, seq_is_sunday))
-        });
-        let comms_from_seq = seq_day.to_commemorate.iter().filter(|&&off| {
-            self.has_first_vespers(off, false)
+        let comms_from_praec = praec_day
+            .to_commemorate
+            .iter()
+            .filter(|&&off| {
+                self.has_second_vespers(off)
+                    // extra check because some occuring offices are commemorated at lauds but not 2V
+                    && self.occ_admits_commemoration(praec, off, true)
+                    && (co.praec_wins() || self.seq_admits_commemoration(off, seq, seq_is_sunday))
+            })
+            .map(|&off| VespersComm::SecondVespers(off));
+        let comms_from_seq = seq_day
+            .to_commemorate
+            .iter()
+            .filter(|&&off| {
+                self.has_first_vespers(off, seq_is_sunday)
                 && (co.seq_wins() || self.praec_admits_commemoration(praec, off, seq_is_sunday))
-        });
-        to_commemorate.extend(chain(comms_from_praec, comms_from_seq).copied());
-        to_commemorate.sort_by(|&c1, &c2| self.compare_commemoration_order(c1, c2));
-        // TODO: remove duplicate commemorations of the same person/octave
-        // TODO: special case: if the office of praec is the last day within an octave
-        // and the octave day is only commemorated on the following day
-        // then the commemoration at vespers is 2V of the day within the octave
-        // rather than 1V of the octave day
+                // this takes care of one specific case, where a day within an octave is followed
+                // by the octave day, but the octave day is superseded by a feast
+                // in which case (in pre-55 rubrics) the commemoration at 1V of the feast is taken
+                // from 2V of the preceding day within the octave, not 1V of the octave day
+                // the 1939 breviary has an explicit rubric about this before the octave day of
+                // Corpus Christi
+                && !off.is_of_same_feast(praec)
+            })
+            .map(|&off| VespersComm::FirstVespers(off));
+        to_commemorate.extend(chain(comms_from_praec, comms_from_seq));
+        // TODO: is there a specific ordering that should hold between 1V and 2V commemorations?
+        to_commemorate
+            .sort_by(|&c1, &c2| self.compare_commemoration_order(c1.office(), c2.office()));
+        let mut to_commemorate_final: Vec<VespersComm<'a>> = Vec::new();
+        for comm in to_commemorate {
+            if !to_commemorate_final
+                .iter()
+                .any(|c| c.office().is_of_same_subject(comm.office()))
+            {
+                to_commemorate_final.push(comm);
+            }
+        }
+
         OrderedVespers {
             vespers,
-            to_commemorate,
+            to_commemorate: to_commemorate_final,
         }
     }
 }
