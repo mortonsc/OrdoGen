@@ -1,6 +1,6 @@
 use super::*;
 
-const SUNDAYS_OF_ADVENT: [Office; 4] = [
+pub const SUNDAYS_OF_ADVENT: [Office; 4] = [
     Office::Sunday {
         id: "dom-1-advent",
         matins_id: None,
@@ -60,6 +60,7 @@ const EPIPHANY: Office = Office::Feast(
     FeastDetails::new("in-epiphania-dnjc", FeastRank::DoubleFirstClass)
         .with_person(Person::OurLord)
         .make_feriatum()
+        .with_vigil(VigilRank::SecondClass)
         .with_octave(OctaveRank::SecondOrder),
 );
 
@@ -491,6 +492,7 @@ impl Calendar1939 {
         // Epiphany cycle
         let epiphany_date = NaiveDate::from_ymd_opt(ch.year, 1, 6).expect("year out of range");
         let epiphany = epiphany_date.ordinal0() as usize;
+        days[epiphany - 1].push(EPIPHANY.vigil().unwrap());
         days[epiphany].push(EPIPHANY);
         let inf_oct_epiph = EPIPHANY.day_within_octave().unwrap();
         for day in 1..7 {
@@ -498,14 +500,14 @@ impl Calendar1939 {
         }
         days[epiphany + 7].push(EPIPHANY.octave_day().unwrap());
 
-        let dom_post_epiph = epiphany + 8 - (epiphany_date.weekday().number_from_sunday() as usize);
+        let dom_post_epiph = ch.sunday_after(epiphany).unwrap();
         let mut last_sunday_after_epiph = 0;
-        for week in 0..7 {
+        for (week, &sunday) in SUNDAYS_AFTER_EPIPHANY.iter().enumerate() {
             let ord = dom_post_epiph + (week * 7);
             if ord >= ch.septuagesima() {
                 break;
             }
-            days[ord].push(SUNDAYS_AFTER_EPIPHANY[week]);
+            days[ord].push(sunday);
             last_sunday_after_epiph += 1;
         }
 
@@ -574,8 +576,8 @@ impl Calendar1939 {
         }
 
         // omit everything from Christmas onwards; it will be dealt with later as a special case
-        for day in ch.christmas..n_days {
-            days[day].truncate(0);
+        for entry in days.iter_mut().skip(ch.christmas) {
+            entry.truncate(0);
         }
 
         days

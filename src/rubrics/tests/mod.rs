@@ -17,7 +17,7 @@ const EXALT_CRUCIS: Office =
 
 const INVENT_STEPHEN: Office =
     Office::feast("inventio-s-stephani-protomartyris", FeastRank::Semidouble)
-        .with_sub_rank(FeastSubRank::Secondary)
+        .make_secondary()
         .done();
 
 const DOM_15_POST_PENT: Office = Office::Sunday {
@@ -145,7 +145,7 @@ fn consecutive_days_in_octave() {
     let rubrics = Rubrics1939;
 
     let inf_oct_assump = ASSUMPTION.day_within_octave().unwrap();
-    let praec_day = OrderedOffice::of_only(inf_oct_assump);
+    let praec_day = OrderedOffice::of(inf_oct_assump);
     let seq_day = praec_day.clone();
     let ov = rubrics.order_vespers(&praec_day, &seq_day, false);
     assert_eq!(ov.vespers, Vespers::SecondVespers(inf_oct_assump));
@@ -156,7 +156,7 @@ fn consecutive_days_in_octave() {
 fn feria_with_greater_feria_comm_simple() {
     let rubrics = Rubrics1939;
 
-    let praec_day = OrderedOffice::of_only(Office::Empty);
+    let praec_day = OrderedOffice::of(Office::Empty);
     let offs = vec![EMBER_WEDNESDAY, SIMPLE_FEAST];
     let (seq_day, _) = rubrics.order_office(&offs[..]);
     assert_eq!(seq_day.office_of_day, EMBER_WEDNESDAY);

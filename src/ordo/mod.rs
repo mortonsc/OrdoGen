@@ -1,15 +1,16 @@
 use chrono::{Datelike, NaiveDate};
-use log::debug;
 use std::collections::VecDeque;
 
 use crate::calendar::{Calendar, CalendarHelper};
 use crate::rubrics::*;
 
+#[derive(Clone)]
 pub struct OrdoEntry<'a> {
     pub lauds: OrderedOffice<'a>,
     pub vespers: OrderedVespers<'a>,
 }
 
+#[derive(Clone)]
 pub struct Ordo<'a> {
     pub year: i32,
     pub entries: Vec<OrdoEntry<'a>>,
@@ -94,6 +95,13 @@ impl<'a> Ordo<'a> {
                 vespers,
             });
         }
+        let dec_23 = ch.ordinal0(12, 23);
+        let christmastide_entries =
+            calendar.order_christmastide(ch.year, entries[dec_23].lauds.clone());
+        for idx in 0..christmastide_entries.len() - 1 {
+            entries[dec_23 + idx] = christmastide_entries[idx].clone();
+        }
+        entries.push(christmastide_entries[christmastide_entries.len() - 1].clone());
 
         Self { year, entries }
     }

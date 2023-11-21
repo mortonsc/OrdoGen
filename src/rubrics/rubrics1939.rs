@@ -78,7 +78,7 @@ impl Rubrics1939 {
                 ..
             }) => 45,
             Office::Feast(FeastDetails {
-                rank: FeastRank::LesserDouble,
+                rank: FeastRank::Double,
                 ..
             }) => 40,
             Office::Feast(FeastDetails {
@@ -118,6 +118,10 @@ impl Rubrics1939 {
                 rank: FeriaRank::Common,
                 ..
             } => 5,
+            Office::Feast(FeastDetails {
+                rank: FeastRank::Commemoration,
+                ..
+            }) => 1,
             Office::Empty => 0,
             _ => panic!("unexpected office in occurence: {:?}", off),
         }
@@ -126,14 +130,24 @@ impl Rubrics1939 {
         if is_second_vespers {
             assert!(self.has_second_vespers(off));
         } else {
-            // it being Sunday or not is irrelevant to 1939 rubrics
-            assert!(self.has_first_vespers(off, false));
+            // assume it's a Sunday (it's not worth passing is_sunday as a parameter just for the
+            // sake of this assert)
+            assert!(self.has_first_vespers(off, true));
         }
         match (is_second_vespers, off) {
             (
                 true,
                 Office::Feria {
                     rank: FeriaRank::DoubleFirstClass,
+                    ..
+                },
+            ) => 21,
+            // Vigil of the Nativity, when it falls on a Sunday
+            // this ranking is mostly arbitrary as it doesn't concur with feasts
+            (
+                false,
+                Office::Vigil {
+                    rank: VigilRank::FirstClass,
                     ..
                 },
             ) => 21,
@@ -152,6 +166,14 @@ impl Rubrics1939 {
                 }),
             ) => 19,
             (true, Office::Sunday { .. }) => 18,
+            // Vigil of the Epiphany
+            (
+                false,
+                Office::Vigil {
+                    rank: VigilRank::SecondClass,
+                    ..
+                },
+            ) => 18,
             (true, Office::OctaveDay { rank, .. }) if rank >= OctaveRank::ThirdOrder => 17,
             (false, Office::Sunday { .. }) => 16,
             (
@@ -172,7 +194,7 @@ impl Rubrics1939 {
             (
                 _,
                 Office::Feast(FeastDetails {
-                    rank: FeastRank::LesserDouble,
+                    rank: FeastRank::Double,
                     ..
                 }),
             ) => 12,
@@ -200,7 +222,14 @@ impl Rubrics1939 {
             ) => 9,
             (false, Office::OurLadyOnSaturday) => 9,
             (true, Office::Feria { .. }) => 8,
-            // All Souls is a special case because its 1V is celbrated in addition to 2V of the
+            (
+                false,
+                Office::Feast(FeastDetails {
+                    rank: FeastRank::Commemoration,
+                    ..
+                }),
+            ) => 2,
+            // All Souls is a special case because its 1V is celebrated in addition to 2V of the
             // preceding day; we treat this as a "commemoration" of All Souls
             (false, Office::AllSouls) => 1,
             (_, Office::Empty) => 0,
@@ -215,7 +244,7 @@ impl Rubrics1939 {
             Office::Feast(FeastDetails { rank, .. }) if rank >= FeastRank::GreaterDouble => 9,
             Office::OctaveDay { .. } => 9, // not explicit in the rubrics; maybe should tie with greater double?
             Office::Feast(FeastDetails {
-                rank: FeastRank::LesserDouble,
+                rank: FeastRank::Double,
                 ..
             }) => 8,
             Office::Sunday { .. } => 7,
@@ -223,8 +252,13 @@ impl Rubrics1939 {
                 rank: FeastRank::Semidouble,
                 ..
             }) => 6,
+            Office::Vigil {
+                rank: VigilRank::SecondClass,
+                ..
+            } => 6,
             Office::WithinOctave { .. } => 5,
             Office::Feria { .. } => 4,
+            Office::Vigil { .. } => 4,
             Office::OurLadyOnSaturday => 3,
             Office::Feast(FeastDetails {
                 rank: FeastRank::Simple | FeastRank::Commemoration,
@@ -235,11 +269,11 @@ impl Rubrics1939 {
             _ => panic!("unexpected commemorated office: {:?}", off),
         }
     }
-    // if d1 and d2 are both feasts, returns an ordering indicating which takes precedence
+    // if d1 and d2 are both feasts or days within octaves, returns which feast has precedence
     // otherwise returns Ordering::Equal (so it can easily be included in a chain of comparisons
     // between arbitrary Offices)
     fn compare_feast_precedence(&self, off1: Office, off2: Office) -> Ordering {
-        if let (Some(fd1), Some(fd2)) = (off1.feast_details(), off2.feast_details()) {
+        if let (Some(fd1), Some(fd2)) = (off1.assoc_feast_details(), off2.assoc_feast_details()) {
             fd1.rank
                 .cmp(&fd2.rank)
                 .then(true_is_greater(fd1.is_solemn(), fd2.is_solemn()))
@@ -280,13 +314,18 @@ impl Rubrics1939 {
 }
 
 impl RubricsSystem for Rubrics1939 {
-    fn has_first_vespers(&self, off: Office, _is_sunday: bool) -> bool {
+    fn has_first_vespers(&self, off: Office, is_sunday: bool) -> bool {
         match off {
             Office::Feast(_) => true,
             // days in octaves can have 1V, though it's usually omitted
             Office::WithinOctave { .. } => true,
             Office::OctaveDay { .. } => true,
             Office::Sunday { .. } => true,
+            // Christmas vigil
+            Office::Vigil {
+                rank: VigilRank::FirstClass,
+                ..
+            } => is_sunday,
             // Epiphany vigil
             Office::Vigil {
                 rank: VigilRank::SecondClass,
@@ -457,6 +496,18 @@ impl RubricsSystem for Rubrics1939 {
         if winner.is_greater_feria() && loser.is_vigil() {
             return false;
         }
+        // In 1V of the Nativity Vigil, the occurring Sunday is not commemorated
+        if matches!(
+            winner,
+            Office::Vigil {
+                rank: VigilRank::FirstClass,
+                ..
+            }
+        ) && matches!(loser, Office::Sunday { .. })
+            && hour != Hour::Lauds
+        {
+            return false;
+        }
         if matches!(
             winner,
             Office::Feast(FeastDetails {
@@ -484,13 +535,13 @@ impl RubricsSystem for Rubrics1939 {
                 Office::Feast(FeastDetails { rank, .. }) => rank > FeastRank::Simple,
                 _ => true,
             },
-            Some(FeastRank::DoubleSecondClass) => match loser {
+            Some(FeastRank::DoubleSecondClass) => !matches!(
+                loser,
                 Office::WithinOctave {
                     rank: OctaveRank::Common,
                     ..
-                } => false,
-                _ => true,
-            },
+                }
+            ),
             _ => true,
         }
     }
@@ -534,7 +585,7 @@ impl RubricsSystem for Rubrics1939 {
                 _ => true,
             },
             Some(FeastRank::DoubleSecondClass) => match praec {
-                Office::Feast(FeastDetails { rank, .. }) => rank >= FeastRank::LesserDouble,
+                Office::Feast(FeastDetails { rank, .. }) => rank >= FeastRank::Double,
                 Office::WithinOctave { rank, .. } => rank >= OctaveRank::ThirdOrder,
                 _ => true,
             },

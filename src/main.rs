@@ -10,27 +10,27 @@ pub mod rubrics;
 
 fn print_temporal_cycle(year: i32) {
     let calendar = calendar::calendar1939::Calendar1939.temporal_cycle(year);
-    for day in 0..calendar.len() {
-        let entry = calendar[day]
+    for (day, entry) in calendar.iter().enumerate() {
+        let entry_s = entry
             .iter()
             .map(|o| o.to_string())
             .collect::<Vec<String>>()
             .join(", ");
         let date = NaiveDate::from_yo_opt(year, (day + 1) as u32).unwrap();
-        println!("{}: {}", date.format("%m/%d"), entry);
+        println!("{}: {}", date.format("%m/%d"), entry_s);
     }
 }
 
 fn print_sanctoral_cycle(year: i32) {
     let calendar = calendar::calendar1939::Calendar1939.sanctoral_cycle(year);
-    for day in 0..calendar.len() {
-        let entry = calendar[day]
+    for (day, entry) in calendar.iter().enumerate() {
+        let entry_s = entry
             .iter()
             .map(|o| o.to_string())
             .collect::<Vec<String>>()
             .join(", ");
         let date = NaiveDate::from_yo_opt(year, (day + 1) as u32).unwrap();
-        println!("{}: {}", date.format("%m/%d"), entry);
+        println!("{}: {}", date.format("%m/%d"), entry_s);
     }
 }
 
@@ -46,5 +46,5 @@ fn print_ordo(year: i32) {
 
 fn main() {
     env_logger::init();
-    print_ordo(2022);
+    print_ordo(2023);
 }

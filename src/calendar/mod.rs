@@ -7,14 +7,16 @@ pub mod calendar1939;
 #[cfg(test)]
 mod tests;
 
+use crate::ordo::*;
 use crate::rubrics::*;
 
 #[derive(Debug, Clone, Copy)]
 pub struct CalendarHelper {
-    year: i32,
-    easter: usize,
-    advent1: usize,
-    christmas: usize,
+    pub year: i32,
+    // TODO: maybe these should be exposed as functions
+    pub easter: usize,
+    pub advent1: usize,
+    pub christmas: usize,
 }
 
 impl CalendarHelper {
@@ -32,9 +34,9 @@ impl CalendarHelper {
     }
     pub fn n_days(self) -> usize {
         if is_leap_year(self.year) {
-            366 as usize
+            366
         } else {
-            365 as usize
+            365
         }
     }
     pub fn ordinal0(self, month: u32, day: u32) -> usize {
@@ -59,19 +61,25 @@ impl CalendarHelper {
     pub fn lent1(self) -> usize {
         self.easter - 42
     }
+    pub fn ash_wednesday(self) -> usize {
+        self.easter - 46
+    }
     pub fn pentecost(self) -> usize {
         self.easter + 49
     }
-    pub fn octave_permitted(self, day: usize) -> bool {
-        if day >= self.lent1() - 4 && day <= self.easter + 7 {
-            false
-        } else if day >= self.pentecost() - 1 && day <= self.pentecost() + 7 {
-            false
-        } else if day >= self.ordinal0(12, 17) {
-            false
+    pub fn sunday_after(self, ord: usize) -> Option<usize> {
+        let date = NaiveDate::from_yo_opt(self.year, (ord + 1) as u32)?;
+        let result = ord + 8 - (date.weekday().number_from_sunday() as usize);
+        if result < self.n_days() {
+            Some(result)
         } else {
-            true
+            None
         }
+    }
+    pub fn octave_permitted(self, day: usize) -> bool {
+        !((day >= self.ash_wednesday() && day <= self.easter - 7)
+            || (day >= self.pentecost() - 1 && day <= self.pentecost() + 7)
+            || day >= self.ordinal0(12, 17))
     }
 }
 
@@ -84,19 +92,29 @@ const ANNUNCIATION: Office = Office::feast("in-annuntiatione-bmv", FeastRank::Do
     .make_feriatum()
     .done();
 
+const CHRIST_THE_KING: Office = Office::feast("dnjc-regis", FeastRank::DoubleFirstClass)
+    .with_person(Person::OurLord)
+    .done();
+
 pub type CalendarEntry<'a> = (u32, u32, FeastDetails<'a>);
 
 pub trait Calendar {
     fn temporal_cycle<'a>(&self, year: i32) -> Vec<Vec<Office<'a>>>;
     fn calendar_of_saints<'a>(&self) -> &[CalendarEntry<'a>];
     fn sanctoral_cycle<'a>(&self, year: i32) -> Vec<Vec<Office<'a>>>;
+    // returns a vec of the ordo entries for Dec 23 - 31
+    fn order_christmastide<'a>(
+        &self,
+        year: i32,
+        lauds_dec23: OrderedOffice<'a>,
+    ) -> Vec<OrdoEntry<'a>>;
     fn sanctoral_cycle_h<'a>(
         &self,
         ch: CalendarHelper,
         rs: impl RubricsSystem,
+        mut days: Vec<Vec<Office<'a>>>,
     ) -> Vec<Vec<Office<'a>>> {
         let calendar = self.calendar_of_saints();
-        let mut days = vec![Vec::new(); ch.n_days()];
 
         // place the feasts with special rules for their placement
         let purification = ch.ordinal0(2, 2);
@@ -117,6 +135,10 @@ pub trait Calendar {
         };
         days[annunciation].push(ANNUNCIATION);
 
+        let oct31_date = NaiveDate::from_ymd_opt(ch.year, 10, 31).unwrap();
+        let ctk = (oct31_date.ordinal0() + 1 - oct31_date.weekday().number_from_sunday()) as usize;
+        days[ctk].push(CHRIST_THE_KING);
+
         let all_souls = ch.ordinal0(11, 2);
         let all_souls = if ch.is_sunday(all_souls) {
             all_souls + 1
@@ -125,9 +147,9 @@ pub trait Calendar {
         };
         days[all_souls].push(Office::AllSouls);
 
-        for (month, day, feast_details) in calendar {
-            let ord = ch.ordinal0(*month, *day);
-            let off = Office::Feast(*feast_details);
+        for &(month, day, feast_details) in calendar {
+            let ord = ch.ordinal0(month, day);
+            let off = Office::Feast(feast_details);
             days[ord].push(off);
             if let Some(vigil) = off.vigil() {
                 let vigil_ord = if ch.is_sunday(ord - 1) && rs.anticipate_vigils() {

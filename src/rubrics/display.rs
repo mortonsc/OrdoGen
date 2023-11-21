@@ -8,7 +8,7 @@ impl fmt::Display for FeastRank {
             Self::Commemoration => "comm",
             Self::Simple => "sp",
             Self::Semidouble => "sd",
-            Self::LesserDouble => "d",
+            Self::Double => "d",
             Self::GreaterDouble => "dm",
             Self::DoubleSecondClass => "d2cl",
             Self::DoubleFirstClass => "d1cl",
@@ -104,7 +104,7 @@ impl<'a> fmt::Display for OrderedOffice<'a> {
                 .iter()
                 .map(|c| c.to_string())
                 .collect::<Vec<String>>()
-                .join(",");
+                .join(", ");
             write!(f, "{}; comm {}", self.office_of_day, comm_list)
         }
     }
@@ -139,7 +139,7 @@ impl<'a> fmt::Display for OrderedVespers<'a> {
                 .iter()
                 .map(|c| c.to_string())
                 .collect::<Vec<String>>()
-                .join(",");
+                .join(", ");
             write!(f, "{}; comm {}", self.vespers, comm_list)
         }
     }

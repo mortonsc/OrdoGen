@@ -22,32 +22,23 @@ fn true_is_greater(rhs: bool, lhs: bool) -> Ordering {
     }
 }
 
-fn false_is_greater(rhs: bool, lhs: bool) -> Ordering {
-    true_is_greater(rhs, lhs).reverse()
-}
-
 // listed from lowest-to-highest so the ordering is correct
 #[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Serialize, Deserialize)]
 pub enum FeastRank {
     Commemoration,
     Simple,
     Semidouble,
-    LesserDouble,
+    Double,
     GreaterDouble,
     DoubleSecondClass,
     DoubleFirstClass,
 }
 
-#[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum FeastSubRank {
     Secondary,
+    #[default]
     Primary,
-}
-
-impl Default for FeastSubRank {
-    fn default() -> Self {
-        FeastSubRank::Primary
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Serialize, Deserialize)]
@@ -59,8 +50,9 @@ pub enum OctaveRank {
     FirstOrder,
 }
 
-#[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum Person {
+    #[default]
     Other,
     Doctor,
     Evangelist,
@@ -71,12 +63,6 @@ pub enum Person {
     OurLady,
     OurLord,
     Trinity,
-}
-
-impl Default for Person {
-    fn default() -> Self {
-        Person::Other
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Serialize, Deserialize)]
@@ -128,8 +114,8 @@ impl<'a> FeastDetails<'a> {
         self.person = person;
         self
     }
-    pub const fn with_sub_rank(mut self, sub_rank: FeastSubRank) -> Self {
-        self.sub_rank = sub_rank;
+    pub const fn make_secondary(mut self) -> Self {
+        self.sub_rank = FeastSubRank::Secondary;
         self
     }
     pub const fn make_patron_or_titular(mut self) -> Self {
@@ -424,12 +410,6 @@ pub enum VespersIs {
 }
 
 impl VespersIs {
-    fn winner_first<K: Copy>(self, praec: K, seq: K) -> (K, K) {
-        match self {
-            Self::DePraec => (praec, seq),
-            Self::DeSeq | Self::ACapSeq => (seq, praec),
-        }
-    }
     pub fn applied_to<'a>(&self, praec: Office<'a>, seq: Office<'a>) -> Vespers<'a> {
         match self {
             VespersIs::DePraec => Vespers::SecondVespers(praec),
@@ -464,11 +444,15 @@ pub struct OrderedOffice<'a> {
 }
 
 impl<'a> OrderedOffice<'a> {
-    pub fn of_only(off: Office<'a>) -> Self {
+    pub fn of(off: Office<'a>) -> Self {
         Self {
             office_of_day: off,
             to_commemorate: Vec::new(),
         }
+    }
+    pub fn with_comm(mut self, comm: Office<'a>) -> Self {
+        self.to_commemorate.push(comm);
+        self
     }
 }
 
@@ -494,10 +478,23 @@ impl<'a> VespersComm<'a> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct OrderedVespers<'a> {
     pub vespers: Vespers<'a>,
     pub to_commemorate: Vec<VespersComm<'a>>,
+}
+
+impl<'a> OrderedVespers<'a> {
+    pub fn of(v: Vespers<'a>) -> Self {
+        Self {
+            vespers: v,
+            to_commemorate: Vec::new(),
+        }
+    }
+    pub fn with_comm(mut self, comm: VespersComm<'a>) -> Self {
+        self.to_commemorate.push(comm);
+        self
+    }
 }
 
 pub trait RubricsSystem {
@@ -548,7 +545,9 @@ pub trait RubricsSystem {
             if outcome.loser_is == LoserIs::Translated {
                 to_translate.push(occ);
             } else if outcome.loser_is == LoserIs::Commemorated
-                && to_commemorate.iter().all(|c| !c.is_of_same_subject(occ))
+                && to_commemorate
+                    .iter()
+                    .all(|&c| self.occ_admits_commemoration(c, occ, Hour::Lauds))
             {
                 to_commemorate.push(occ);
             }
