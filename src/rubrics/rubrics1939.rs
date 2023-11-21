@@ -1,5 +1,6 @@
 use super::*;
 
+#[derive(Clone, Copy)]
 pub struct Rubrics1939;
 
 impl Rubrics1939 {
@@ -261,6 +262,29 @@ impl Rubrics1939 {
             _ => panic!("trying to anticipate a Sunday to unexpected day: {:?}", off),
         }
     }
+    // returns whether off is of the sort to be commemorated
+    // within an occuring office at the given hour
+    fn wants_commemoration(&self, off: Office, hour: Hour) -> bool {
+        if hour == Hour::FirstVespers && !self.has_first_vespers(off, false)
+            || hour == Hour::SecondVespers && !self.has_second_vespers(off)
+        {
+            return false;
+        }
+        match off {
+            Office::Feria {
+                commemorated_at_vespers: false,
+                ..
+            } if hour == Hour::SecondVespers => false,
+            // OLOS can be commemorated in concurrence (but not occurence)
+            Office::OurLadyOnSaturday => hour == Hour::FirstVespers,
+            Office::Feria {
+                rank: FeriaRank::Common,
+                ..
+            }
+            | Office::Empty => false,
+            _ => true,
+        }
+    }
 }
 
 impl RubricsSystem for Rubrics1939 {
@@ -269,6 +293,7 @@ impl RubricsSystem for Rubrics1939 {
             Office::Feast(_) => true,
             // days in octaves can have 1V, though it's usually omitted
             Office::WithinOctave { .. } => true,
+            Office::OctaveDay { .. } => true,
             Office::Sunday { .. } => true,
             // Epiphany vigil
             Office::Vigil {
@@ -291,6 +316,7 @@ impl RubricsSystem for Rubrics1939 {
             Office::WithinOctave {
                 has_second_vespers, ..
             } => has_second_vespers,
+            Office::OctaveDay { rank, .. } => rank > OctaveRank::Simple,
             Office::Vigil { .. } | Office::AllSouls | Office::OurLadyOnSaturday => false,
             _ => true,
         }
@@ -308,12 +334,7 @@ impl RubricsSystem for Rubrics1939 {
             _ => true,
         }
     }
-    fn occurrence_outcome(
-        &self,
-        occ1: Office,
-        occ2: Office,
-        at_vespers: bool,
-    ) -> OccurrenceOutcome {
+    fn occurrence_outcome(&self, occ1: Office, occ2: Office) -> OccurrenceOutcome {
         let ord = self.compare_precedence_occ(occ1, occ2);
         let office_to_celebrate = match ord {
             // the rubrics assume there will never be occuring feasts of perfectly equal precedence
@@ -324,7 +345,7 @@ impl RubricsSystem for Rubrics1939 {
         let (winner, loser) = office_to_celebrate.winner_first(occ1, occ2);
         let loser_is = if self.is_translated(loser) {
             LoserIs::Translated
-        } else if self.occ_admits_commemoration(winner, loser, at_vespers) {
+        } else if self.occ_admits_commemoration(winner, loser, Hour::Lauds) {
             LoserIs::Commemorated
         } else {
             LoserIs::Omitted
@@ -417,23 +438,28 @@ impl RubricsSystem for Rubrics1939 {
             .cmp(&self.commemoration_ordering_key(comm2))
             .reverse()
     }
-    fn occ_admits_commemoration(&self, winner: Office, loser: Office, at_vespers: bool) -> bool {
-        let loser_wants_commemoration = match loser {
-            Office::Feria {
-                commemorated_at_vespers: false,
-                ..
-            } if at_vespers => false,
-            Office::Feria {
-                rank: FeriaRank::Common,
-                ..
-            } => false,
-            Office::OurLadyOnSaturday | Office::Empty => false,
-            _ => true,
-        };
-        if !loser_wants_commemoration {
+    fn occ_admits_commemoration(&self, winner: Office, loser: Office, hour: Hour) -> bool {
+        if !self.wants_commemoration(loser, hour) {
+            return false;
+        }
+        if loser == Office::OurLadyOnSaturday {
+            // this needs to be a separate case from wants_commemoration() because OLOS is
+            // sometimes commemorated in concurrence
             return false;
         }
         if winner.is_of_same_subject(loser) {
+            return false;
+        }
+        if matches!(
+            winner,
+            Office::Feria {
+                rank: FeriaRank::DoubleFirstClass,
+                ..
+            }
+        ) {
+            return false;
+        }
+        if winner == Office::AllSouls {
             return false;
         }
         if winner.is_greater_feria() && loser.is_vigil() {
@@ -444,7 +470,7 @@ impl RubricsSystem for Rubrics1939 {
             Office::Feast(FeastDetails {
                 rank: FeastRank::DoubleFirstClass,
                 sub_rank: FeastSubRank::Primary,
-                person: Person::OurLord,
+                person: Person::OurLord | Person::Trinity,
                 is_local: false,
                 ..
             })
@@ -476,9 +502,9 @@ impl RubricsSystem for Rubrics1939 {
             _ => true,
         }
     }
-    fn praec_admits_commemoration(&self, praec: Office, seq: Office, seq_is_sunday: bool) -> bool {
+    fn praec_admits_commemoration(&self, praec: Office, seq: Office, _seq_is_sunday: bool) -> bool {
         assert!(self.has_second_vespers(praec));
-        if !self.has_first_vespers(seq, seq_is_sunday) {
+        if !self.wants_commemoration(seq, Hour::FirstVespers) {
             return false;
         }
         if praec.is_of_same_subject(seq) {
@@ -502,17 +528,7 @@ impl RubricsSystem for Rubrics1939 {
     }
     fn seq_admits_commemoration(&self, praec: Office, seq: Office, seq_is_sunday: bool) -> bool {
         assert!(self.has_first_vespers(seq, seq_is_sunday));
-        if !self.has_second_vespers(praec) {
-            return false;
-        }
-        if let Office::Empty = praec {
-            return false;
-        }
-        if let Office::Feria {
-            commemorated_at_vespers: false,
-            ..
-        } = praec
-        {
+        if !self.wants_commemoration(praec, Hour::SecondVespers) {
             return false;
         }
         if praec.is_of_same_subject(seq) {
@@ -532,5 +548,8 @@ impl RubricsSystem for Rubrics1939 {
             },
             _ => true,
         }
+    }
+    fn anticipate_vigils(&self) -> bool {
+        true
     }
 }

@@ -93,3 +93,54 @@ impl<'a> fmt::Display for Office<'a> {
         }
     }
 }
+
+impl<'a> fmt::Display for OrderedOffice<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.to_commemorate.is_empty() {
+            write!(f, "{}", self.office_of_day)
+        } else {
+            let comm_list = self
+                .to_commemorate
+                .iter()
+                .map(|c| c.to_string())
+                .collect::<Vec<String>>()
+                .join(",");
+            write!(f, "{}; comm {}", self.office_of_day, comm_list)
+        }
+    }
+}
+
+impl<'a> fmt::Display for Vespers<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::FirstVespers(off) => write!(f, "1V {}", off),
+            Self::SecondVespers(off) => write!(f, "2V {}", off),
+            Self::SplitAtCap(off1, off2) => write!(f, "2V {}, a cap 1V {}", off1, off2),
+        }
+    }
+}
+
+impl<'a> fmt::Display for VespersComm<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::FirstVespers(off) => write!(f, "1V {}", off),
+            Self::SecondVespers(off) => write!(f, "2V {}", off),
+        }
+    }
+}
+
+impl<'a> fmt::Display for OrderedVespers<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.to_commemorate.is_empty() {
+            write!(f, "{}", self.vespers)
+        } else {
+            let comm_list = self
+                .to_commemorate
+                .iter()
+                .map(|c| c.to_string())
+                .collect::<Vec<String>>()
+                .join(",");
+            write!(f, "{}; comm {}", self.vespers, comm_list)
+        }
+    }
+}

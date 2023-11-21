@@ -74,42 +74,42 @@ fn cmp_person() {
 fn occurrence() {
     let rubrics = Rubrics1939;
     assert_eq!(
-        rubrics.occurrence_outcome(CORPUS_CHRISTI, EMBER_WEDNESDAY, false),
+        rubrics.occurrence_outcome(CORPUS_CHRISTI, EMBER_WEDNESDAY),
         OccurrenceOutcome {
             office_to_celebrate: OfficeIs::DePrimo,
             loser_is: LoserIs::Commemorated
         }
     );
     assert_eq!(
-        rubrics.occurrence_outcome(ASSUMPTION.vigil().unwrap(), ADVENT_FERIA, false),
+        rubrics.occurrence_outcome(ASSUMPTION.vigil().unwrap(), ADVENT_FERIA),
         OccurrenceOutcome {
             office_to_celebrate: OfficeIs::DeSecundo,
             loser_is: LoserIs::Omitted,
         }
     );
     assert_eq!(
-        rubrics.occurrence_outcome(DOM_1_QUAD, THOMAS_AP, false),
+        rubrics.occurrence_outcome(DOM_1_QUAD, THOMAS_AP),
         OccurrenceOutcome {
             office_to_celebrate: OfficeIs::DePrimo,
             loser_is: LoserIs::Translated,
         }
     );
     assert_eq!(
-        rubrics.occurrence_outcome(DOM_15_POST_PENT, INVENT_STEPHEN, false),
+        rubrics.occurrence_outcome(DOM_15_POST_PENT, INVENT_STEPHEN),
         OccurrenceOutcome {
             office_to_celebrate: OfficeIs::DePrimo,
             loser_is: LoserIs::Commemorated,
         }
     );
     assert_eq!(
-        rubrics.occurrence_outcome(EXALT_CRUCIS, ASSUMPTION.octave_day().unwrap(), false),
+        rubrics.occurrence_outcome(EXALT_CRUCIS, ASSUMPTION.octave_day().unwrap()),
         OccurrenceOutcome {
             office_to_celebrate: OfficeIs::DeSecundo,
             loser_is: LoserIs::Commemorated,
         }
     );
     assert_eq!(
-        rubrics.occurrence_outcome(DOM_SEPTUAGESIMA, ASSUMPTION, false),
+        rubrics.occurrence_outcome(DOM_SEPTUAGESIMA, ASSUMPTION),
         OccurrenceOutcome {
             office_to_celebrate: OfficeIs::DeSecundo,
             loser_is: LoserIs::Commemorated,
@@ -119,7 +119,6 @@ fn occurrence() {
         rubrics.occurrence_outcome(
             ASSUMPTION.day_within_octave().unwrap(),
             OUR_LADY_ON_SATURDAY,
-            false
         ),
         OccurrenceOutcome {
             office_to_celebrate: OfficeIs::DePrimo,

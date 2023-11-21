@@ -348,11 +348,15 @@ impl<'a> Office<'a> {
     pub fn day_within_octave(self) -> Option<Self> {
         let feast_details = self.feast_details()?;
         let rank = feast_details.octave?;
-        Some(Self::WithinOctave {
-            feast_details,
-            rank,
-            has_second_vespers: true,
-        })
+        if rank == OctaveRank::Simple {
+            None
+        } else {
+            Some(Self::WithinOctave {
+                feast_details,
+                rank,
+                has_second_vespers: true,
+            })
+        }
     }
     pub fn octave_day(self) -> Option<Self> {
         let feast_details = self.feast_details()?;
@@ -401,6 +405,13 @@ pub enum LoserIs {
 pub struct OccurrenceOutcome {
     office_to_celebrate: OfficeIs,
     loser_is: LoserIs,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Hour {
+    FirstVespers,
+    Lauds,
+    SecondVespers,
 }
 
 // note that when Vespers is split at the cap,
@@ -493,8 +504,7 @@ pub trait RubricsSystem {
     fn has_first_vespers(&self, off: Office, is_sunday: bool) -> bool;
     fn has_second_vespers(&self, off: Office) -> bool;
     fn admits_translated_feast(&self, off: Office) -> bool;
-    fn occurrence_outcome(&self, occ1: Office, occ2: Office, at_vespers: bool)
-        -> OccurrenceOutcome;
+    fn occurrence_outcome(&self, occ1: Office, occ2: Office) -> OccurrenceOutcome;
     // assumes both praec and seq are the office of their respective days
     fn concurrence_outcome(
         &self,
@@ -505,13 +515,16 @@ pub trait RubricsSystem {
     fn compare_precedence_occ(&self, occ1: Office, occ2: Office) -> Ordering;
     fn compare_precedence_conc(&self, praec: Office, seq: Office) -> VespersIs;
     fn compare_commemoration_order(&self, comm1: Office, comm2: Office) -> Ordering;
-    // assuming the office of the day is winner, returns true iff loser is to be commemorated
-    // at Lauds (at_vespers == false) or at Vespers (at_vespers == true)
-    fn occ_admits_commemoration(&self, winner: Office, loser: Office, at_vespers: bool) -> bool;
+    // assuming the office of the day is winner and loser occurs on the same day,
+    // returns whether loser should be commemorated at the given hour
+    fn occ_admits_commemoration(&self, winner: Office, loser: Office, hour: Hour) -> bool;
     // assuming Vespers is of praec, returns true if seq is to be commemorated
     fn praec_admits_commemoration(&self, praec: Office, seq: Office, seq_is_sunday: bool) -> bool;
     // assuming Vespers is of seq, returns true if praec is to be commemorated
     fn seq_admits_commemoration(&self, praec: Office, seq: Office, seq_is_sunday: bool) -> bool;
+    // returns true if vigils that fall on Sunday should be anticipated
+    // doesn't apply to the vigils of Christmas or Epiphany
+    fn anticipate_vigils(&self) -> bool;
     fn order_office<'a>(&self, occs: &[Office<'a>]) -> (OrderedOffice<'a>, Vec<Office<'a>>) {
         let mut to_commemorate: Vec<Office<'a>> = Vec::new();
         let mut to_translate: Vec<Office<'a>> = Vec::new();
@@ -529,7 +542,7 @@ pub trait RubricsSystem {
         let office_of_day: Office = occs.pop().unwrap();
         // reverse because we want to deal with higher-ranked things first
         for &occ in occs.iter().rev() {
-            let outcome = self.occurrence_outcome(office_of_day, occ, false);
+            let outcome = self.occurrence_outcome(office_of_day, occ);
             assert_eq!(outcome.office_to_celebrate, OfficeIs::DePrimo);
             if outcome.loser_is == LoserIs::Translated {
                 to_translate.push(occ);
@@ -584,10 +597,11 @@ pub trait RubricsSystem {
             .to_commemorate
             .iter()
             .filter(|&&off| {
-                self.has_second_vespers(off)
-                    // extra check because some occuring offices are commemorated at lauds but not 2V
-                    && self.occ_admits_commemoration(praec, off, true)
-                    && (co.praec_wins() || self.seq_admits_commemoration(off, seq, seq_is_sunday))
+                if co.praec_wins() {
+                    self.occ_admits_commemoration(praec, off, Hour::SecondVespers)
+                } else {
+                    self.seq_admits_commemoration(off, seq, seq_is_sunday)
+                }
             })
             .map(|&off| VespersComm::SecondVespers(off))
             .collect();
@@ -595,19 +609,34 @@ pub trait RubricsSystem {
             .to_commemorate
             .iter()
             .filter(|&&off| {
-                self.has_first_vespers(off, seq_is_sunday)
-                && (co.seq_wins() || self.praec_admits_commemoration(praec, off, seq_is_sunday))
+                if co.praec_wins() {
+                    self.praec_admits_commemoration(praec, off, seq_is_sunday)
+                } else {
+                    self.occ_admits_commemoration(seq, off, Hour::FirstVespers)
+                }
+            })
+            .filter(|&&off| {
                 // (pre-55) when two consecutive days within octaves are commemorated,
                 // the commemoration at Vespers is 2V of the first day
+                // this also removes 1V of the first day in an octave (though we would do that
+                // later anyways)
                 // in 1962 days in octaves don't have 1V so this does nothing
-                && !(matches!(off, Office::WithinOctave { .. }) && comms_from_praec.iter().any(|c| c.office().is_of_same_feast(off)))
+                if let Office::WithinOctave { .. } = off {
+                    !comms_from_praec
+                        .iter()
+                        .any(|c| c.office().is_of_same_feast(off))
+                } else {
+                    true
+                }
+            })
+            .filter(|&&off| {
                 // this takes care of one specific case, where a day within an octave is followed
                 // by the octave day, but the octave day is superseded by a feast
                 // in which case (in pre-55 rubrics) the commemoration at 1V of the feast is taken
                 // from 2V of the preceding day within the octave, not 1V of the octave day
                 // the 1939 breviary has an explicit rubric about this before the octave day of
                 // Corpus Christi
-                && !off.is_of_same_feast(praec)
+                !off.is_of_same_feast(praec)
             })
             .map(|&off| VespersComm::FirstVespers(off))
             .collect();
