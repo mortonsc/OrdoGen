@@ -23,12 +23,18 @@ impl Rubrics1939 {
                 ..
             } => 100,
             Office::AllSouls => 100,
+            Office::Feast(FeastDetails {
+                rank: FeastRank::DoubleFirstClass,
+                is_local: false,
+                ..
+            }) => 95,
             Office::OctaveDay {
                 rank: OctaveRank::SecondOrder,
                 ..
             } => 94,
             Office::Feast(FeastDetails {
                 rank: FeastRank::DoubleFirstClass,
+                is_local: true,
                 ..
             }) => 93,
             Office::Sunday {
@@ -247,20 +253,6 @@ impl Rubrics1939 {
     fn is_translated(&self, off: Office) -> bool {
         off.feast_details()
             .map_or(false, |fd| fd.rank >= FeastRank::DoubleSecondClass)
-    }
-    pub fn admits_anticipated_sunday(&self, off: Office) -> bool {
-        // Sundays cannot be anticipated to "days of 9 lessons"
-        match off {
-            Office::Feast(FeastDetails { rank, .. }) => rank <= FeastRank::Simple,
-            Office::WithinOctave { .. } => false,
-            Office::OctaveDay { rank, .. } => rank > OctaveRank::Simple,
-            Office::Feria {
-                rank: FeriaRank::Common,
-                ..
-            } => true,
-            Office::OurLadyOnSaturday => true,
-            _ => panic!("trying to anticipate a Sunday to unexpected day: {:?}", off),
-        }
     }
     // returns whether off is of the sort to be commemorated
     // within an occuring office at the given hour
@@ -551,5 +543,20 @@ impl RubricsSystem for Rubrics1939 {
     }
     fn anticipate_vigils(&self) -> bool {
         true
+    }
+    fn admits_anticipated_sunday(&self, off: Office) -> bool {
+        // Sundays cannot be anticipated to "days of 9 lessons"
+        match off {
+            Office::Feast(FeastDetails { rank, .. }) => rank <= FeastRank::Simple,
+            Office::WithinOctave { .. } => false,
+            Office::OctaveDay { rank, .. } => rank > OctaveRank::Simple,
+            Office::Feria {
+                rank: FeriaRank::Common,
+                ..
+            }
+            | Office::OurLadyOnSaturday
+            | Office::Empty => true,
+            _ => panic!("trying to anticipate a Sunday to unexpected day: {:?}", off),
+        }
     }
 }

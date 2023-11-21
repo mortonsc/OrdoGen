@@ -498,7 +498,7 @@ impl Calendar1939 {
         }
         days[epiphany + 7].push(EPIPHANY.octave_day().unwrap());
 
-        let dom_post_epiph = epiphany + 7 - (epiphany_date.weekday().number_from_monday() as usize);
+        let dom_post_epiph = epiphany + 8 - (epiphany_date.weekday().number_from_sunday() as usize);
         let mut last_sunday_after_epiph = 0;
         for week in 0..7 {
             let ord = dom_post_epiph + (week * 7);

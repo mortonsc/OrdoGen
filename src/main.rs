@@ -35,7 +35,7 @@ fn print_sanctoral_cycle(year: i32) {
 }
 
 fn print_ordo(year: i32) {
-    let ordo = Ordo::new(calendar::calendar1939::Calendar1939, Rubrics1939, 2023);
+    let ordo = Ordo::new(calendar::calendar1939::Calendar1939, Rubrics1939, year);
     for day in 0..ordo.entries.len() {
         let date = NaiveDate::from_yo_opt(year, (day + 1) as u32).unwrap();
         let entry = &ordo.entries[day];
@@ -45,5 +45,6 @@ fn print_ordo(year: i32) {
 }
 
 fn main() {
-    print_ordo(2023);
+    env_logger::init();
+    print_ordo(2022);
 }

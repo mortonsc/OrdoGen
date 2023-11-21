@@ -1,4 +1,5 @@
 use chrono::{Datelike, NaiveDate};
+use log::debug;
 use std::collections::VecDeque;
 
 use crate::calendar::{Calendar, CalendarHelper};
@@ -25,8 +26,19 @@ impl<'a> Ordo<'a> {
         let mut all_lauds: Vec<OrderedOffice<'a>> = Vec::new();
         let mut to_translate: VecDeque<Office<'a>> = VecDeque::new();
         for day in 0..temporal.len() {
-            // TODO: anticipated Sundays
             let mut offices = temporal[day].clone();
+            // remove anticipated Sunday to deal with later
+            let antic_sunday: Option<Office<'a>> = if let Some(Office::Feria {
+                rank: FeriaRank::AnticipatedSunday,
+                ..
+            }) = offices.get(0)
+            {
+                // hacky but this should always work
+                assert!(temporal[day].len() == 1);
+                offices.pop()
+            } else {
+                None
+            };
             offices.extend_from_slice(&(sanctoral[day])[..]);
             // if we're translating a feast with an octave, we delete days from its octave as we go
             let offices: Vec<Office<'a>> = offices
@@ -50,6 +62,26 @@ impl<'a> Ordo<'a> {
                 to_translate.push_back(t);
             }
             all_lauds.push(lauds);
+            if let Some(antic_sunday) = antic_sunday {
+                let mut antic_day = day;
+                for offset in 0..6 {
+                    if rubrics_system
+                        .admits_anticipated_sunday(all_lauds[day - offset].office_of_day)
+                    {
+                        antic_day = day - offset;
+                        break;
+                    }
+                }
+                // now we re-generate the office for the day with the anticipated Sunday
+                let mut offices = temporal[antic_day].clone();
+                if antic_day != day {
+                    offices.push(antic_sunday);
+                }
+                offices.extend_from_slice(&(sanctoral[antic_day])[..]);
+                let (lauds, no_translations) = rubrics_system.order_office(&offices[..]);
+                assert!(no_translations.is_empty());
+                all_lauds[antic_day] = lauds
+            }
         }
         for day in 0..(temporal.len() - 1) {
             let vespers = rubrics_system.order_vespers(

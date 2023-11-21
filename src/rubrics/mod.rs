@@ -525,6 +525,7 @@ pub trait RubricsSystem {
     // returns true if vigils that fall on Sunday should be anticipated
     // doesn't apply to the vigils of Christmas or Epiphany
     fn anticipate_vigils(&self) -> bool;
+    fn admits_anticipated_sunday(&self, off: Office) -> bool;
     fn order_office<'a>(&self, occs: &[Office<'a>]) -> (OrderedOffice<'a>, Vec<Office<'a>>) {
         let mut to_commemorate: Vec<Office<'a>> = Vec::new();
         let mut to_translate: Vec<Office<'a>> = Vec::new();
