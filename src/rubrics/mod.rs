@@ -104,7 +104,9 @@ pub struct FeastDetails<'a> {
     #[serde(default)]
     pub octave: Option<OctaveRank>,
     #[serde(default)]
-    pub is_feriata: bool,
+    pub vigil: Option<VigilRank>,
+    #[serde(default)]
+    pub is_feriatum: bool,
 }
 
 impl<'a> FeastDetails<'a> {
@@ -118,7 +120,8 @@ impl<'a> FeastDetails<'a> {
             is_local: false,
             is_moveable: false,
             octave: None,
-            is_feriata: false,
+            vigil: None,
+            is_feriatum: false,
         }
     }
     pub const fn with_person(mut self, person: Person) -> Self {
@@ -141,17 +144,24 @@ impl<'a> FeastDetails<'a> {
         self.is_moveable = true;
         self
     }
-    pub const fn make_feriata(mut self) -> Self {
-        self.is_feriata = true;
+    pub const fn make_feriatum(mut self) -> Self {
+        self.is_feriatum = true;
         self
     }
     pub const fn with_octave(mut self, rank: OctaveRank) -> Self {
         self.octave = Some(rank);
         self
     }
+    pub const fn with_vigil(mut self, rank: VigilRank) -> Self {
+        self.vigil = Some(rank);
+        self
+    }
     // this technical meaning of "solemn" is relevant to determining feast precedence
     pub fn is_solemn(self) -> bool {
-        self.is_feriata || self.octave.is_some()
+        self.is_feriatum || self.octave.is_some()
+    }
+    pub const fn done(self) -> Office<'a> {
+        Office::Feast(self)
     }
 }
 
@@ -308,7 +318,10 @@ impl<'a> Office<'a> {
             commemorated_at_vespers: has_second_vespers,
         }
     }
-    pub fn unnamed_feria(rank: FeriaRank, has_second_vespers: bool) -> Self {
+    pub const fn feast(id: &'a str, rank: FeastRank) -> FeastDetails<'a> {
+        FeastDetails::new(id, rank)
+    }
+    pub const fn unnamed_feria(rank: FeriaRank, has_second_vespers: bool) -> Self {
         Self::Feria {
             id: None,
             rank,
@@ -316,13 +329,21 @@ impl<'a> Office<'a> {
             commemorated_at_vespers: has_second_vespers,
         }
     }
-    pub fn common_feria() -> Self {
+    pub const fn common_feria() -> Self {
         Self::Feria {
             id: None,
             rank: FeriaRank::Common,
             has_second_vespers: true,
             commemorated_at_vespers: true,
         }
+    }
+    pub fn vigil(self) -> Option<Self> {
+        let feast_details = self.feast_details()?;
+        let rank = feast_details.vigil?;
+        Some(Self::Vigil {
+            feast_details,
+            rank,
+        })
     }
     pub fn day_within_octave(self) -> Option<Self> {
         let feast_details = self.feast_details()?;
@@ -340,6 +361,17 @@ impl<'a> Office<'a> {
             feast_details,
             rank,
         })
+    }
+    pub fn with_matins_id(self, new_matins_id: &'a str) -> Self {
+        if let Self::Sunday { id, rank, .. } = self {
+            Self::Sunday {
+                id,
+                matins_id: Some(new_matins_id),
+                rank,
+            }
+        } else {
+            self
+        }
     }
 }
 

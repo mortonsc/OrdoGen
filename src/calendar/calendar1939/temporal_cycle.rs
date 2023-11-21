@@ -1,8 +1,4 @@
-use chrono::{Datelike, NaiveDate};
-use liturgical::western::easter;
-use time::util::is_leap_year;
-
-use crate::rubrics::*;
+use super::*;
 
 const SUNDAYS_OF_ADVENT: [Office; 4] = [
     Office::Sunday {
@@ -63,14 +59,14 @@ const SUNDAYS_AFTER_EPIPHANY: [Office; 6] = [
 const EPIPHANY: Office = Office::Feast(
     FeastDetails::new("in-epiphania-dnjc", FeastRank::DoubleFirstClass)
         .with_person(Person::OurLord)
-        .make_feriata()
+        .make_feriatum()
         .with_octave(OctaveRank::SecondOrder),
 );
 
 const EASTER: Office = Office::Feast(
     FeastDetails::new("dom-resurrectionis", FeastRank::DoubleFirstClass)
         .with_person(Person::OurLord)
-        .make_feriata()
+        .make_feriatum()
         .with_octave(OctaveRank::FirstOrder)
         .make_moveable(),
 );
@@ -78,7 +74,7 @@ const EASTER: Office = Office::Feast(
 const ASCENSION: Office = Office::Feast(
     FeastDetails::new("in-ascensione-dnjc", FeastRank::DoubleFirstClass)
         .with_person(Person::OurLord)
-        .make_feriata()
+        .make_feriatum()
         .with_octave(OctaveRank::ThirdOrder)
         .make_moveable(),
 );
@@ -86,7 +82,7 @@ const ASCENSION: Office = Office::Feast(
 const PENTECOST: Office = Office::Feast(
     FeastDetails::new("dom-pentecostes", FeastRank::DoubleFirstClass)
         .with_person(Person::Trinity)
-        .make_feriata()
+        .make_feriatum()
         .with_octave(OctaveRank::FirstOrder)
         .make_moveable(),
 );
@@ -94,14 +90,14 @@ const PENTECOST: Office = Office::Feast(
 const TRINITY_SUNDAY: Office = Office::Feast(
     FeastDetails::new("dom-ss-trinitatis", FeastRank::DoubleFirstClass)
         .with_person(Person::Trinity)
-        .make_feriata()
+        .make_feriatum()
         .make_moveable(),
 );
 
 const CORPUS_CHRISTI: Office = Office::Feast(
     FeastDetails::new("ss-corporis-christi", FeastRank::DoubleFirstClass)
         .with_person(Person::OurLord)
-        .make_feriata()
+        .make_feriatum()
         .with_octave(OctaveRank::SecondOrder)
         .make_moveable(),
 );
@@ -304,30 +300,17 @@ const EASTER_CYCLE_SUNDAYS: [Office; N_EASTER_CYCLE_SUNDAYS] = [
     },
 ];
 
-// returns a vector containing a vector of offices for each day, plus (possibly) an anticipated
-// Sunday which needs to be added to the calendar after feasts
-fn temporal_cycle<'a>(year: i32) -> Vec<Vec<Office<'a>>> {
-    let n_days = if is_leap_year(year) { 366 } else { 365 };
+// returns a vector containing a vector of offices for each day
+pub fn temporal_cycle<'a>(cb: CalendarBuilder) -> Vec<Vec<Office<'a>>> {
+    let n_days = if is_leap_year(cb.year) { 366 } else { 365 };
     let mut days = vec![Vec::new(); n_days];
-    let ordinal0 = |month: u32, day: u32| {
-        let day = if is_leap_year(year) && month == 2 && day >= 24 {
-            day + 1
-        } else {
-            day
-        };
-        NaiveDate::from_ymd_opt(year, month, day)
-            .expect("invalid date")
-            .ordinal0() as usize
-    };
 
     // Easter cycle
-    let easter = easter::date(year).unwrap().ordinal0() as usize;
-    let septuagesima = easter - 63;
     for week in 0..N_EASTER_CYCLE_SUNDAYS {
-        days[septuagesima + (7 * week)].push(EASTER_CYCLE_SUNDAYS[week])
+        days[cb.septuagesima() + (7 * week)].push(EASTER_CYCLE_SUNDAYS[week])
     }
     // Lenten ferias
-    let lent1 = easter - 42;
+    let lent1 = cb.easter - 42;
     days[lent1 - 4].push(Office::named_feria(
         "dies-cinerum",
         FeriaRank::Privileged,
@@ -354,15 +337,15 @@ fn temporal_cycle<'a>(year: i32) -> Vec<Vec<Office<'a>>> {
         FeriaRank::ThirdClass,
         false,
     ));
-    for week in 1..4 {
-        for day in 1..5 {
+    for week in 1..5 {
+        for day in 1..6 {
             days[lent1 + (7 * week) + day].push(Office::unnamed_feria(FeriaRank::ThirdClass, true));
         }
         days[lent1 + (7 * week) + 6].push(Office::unnamed_feria(FeriaRank::ThirdClass, false));
     }
 
     // Holy week
-    let palm_sunday = easter - 7;
+    let palm_sunday = cb.easter - 7;
     for day in 1..4 {
         days[palm_sunday + day].push(Office::unnamed_feria(FeriaRank::Privileged, true));
     }
@@ -383,28 +366,28 @@ fn temporal_cycle<'a>(year: i32) -> Vec<Vec<Office<'a>>> {
     ));
 
     // Easter week
-    days[easter + 1].push(Office::named_feria(
+    days[cb.easter + 1].push(Office::named_feria(
         "fer-2-paschatis",
         FeriaRank::DoubleFirstClass,
         true,
     ));
-    days[easter + 2].push(Office::named_feria(
+    days[cb.easter + 2].push(Office::named_feria(
         "fer-3-paschatis",
         FeriaRank::DoubleFirstClass,
         true,
     ));
     let inf_oct_pascha = EASTER.day_within_octave().unwrap();
     for day in 3..6 {
-        days[easter + day].push(inf_oct_pascha);
+        days[cb.easter + day].push(inf_oct_pascha);
     }
-    days[easter + 6].push(Office::WithinOctave {
+    days[cb.easter + 6].push(Office::WithinOctave {
         feast_details: EASTER.feast_details().unwrap(),
         rank: OctaveRank::FirstOrder,
         has_second_vespers: false,
     });
 
     // Rogation Monday
-    days[easter + 36].push(Office::Feria {
+    days[cb.easter + 36].push(Office::Feria {
         id: Some("fer-2-in-rogationibus"),
         rank: FeriaRank::ThirdClass,
         has_second_vespers: true,
@@ -412,7 +395,7 @@ fn temporal_cycle<'a>(year: i32) -> Vec<Vec<Office<'a>>> {
     });
 
     // Ascension and its octave
-    let ascension = easter + 39;
+    let ascension = cb.easter + 39;
     days[ascension - 1].push(Office::Vigil {
         feast_details: ASCENSION.feast_details().unwrap(),
         rank: VigilRank::Common,
@@ -426,7 +409,7 @@ fn temporal_cycle<'a>(year: i32) -> Vec<Vec<Office<'a>>> {
     // TODO: special status for the following Friday
 
     // Pentecost and its octave
-    let pentecost = easter + 49;
+    let pentecost = cb.easter + 49;
     days[pentecost - 1].push(Office::Vigil {
         rank: VigilRank::FirstClass,
         feast_details: PENTECOST.feast_details().unwrap(),
@@ -437,7 +420,7 @@ fn temporal_cycle<'a>(year: i32) -> Vec<Vec<Office<'a>>> {
         FeriaRank::DoubleFirstClass,
         true,
     ));
-    days[easter + 2].push(Office::named_feria(
+    days[pentecost + 2].push(Office::named_feria(
         "fer-3-pentecostes",
         FeriaRank::DoubleFirstClass,
         true,
@@ -471,43 +454,41 @@ fn temporal_cycle<'a>(year: i32) -> Vec<Vec<Office<'a>>> {
     days[sacred_heart + 7].push(SACRED_HEART.octave_day().unwrap());
 
     // Advent cycle
-    let christmas_date = NaiveDate::from_ymd_opt(year, 12, 25).unwrap();
-    let christmas = christmas_date.ordinal0() as usize;
-    let advent1 = christmas - (christmas_date.weekday().number_from_monday() as usize) - 21;
     for week in 0..2 {
-        days[advent1 + (week * 7)].push(SUNDAYS_OF_ADVENT[week]);
+        days[cb.advent1 + (week * 7)].push(SUNDAYS_OF_ADVENT[week]);
         for day in 1..6 {
-            days[advent1 + (week * 7) + day]
+            days[cb.advent1 + (week * 7) + day]
                 .push(Office::unnamed_feria(FeriaRank::ThirdClass, true));
         }
-        days[advent1 + (week * 7) + 6].push(Office::unnamed_feria(FeriaRank::ThirdClass, false));
+        days[cb.advent1 + (week * 7) + 6].push(Office::unnamed_feria(FeriaRank::ThirdClass, false));
     }
-    days[advent1 + 14].push(SUNDAYS_OF_ADVENT[2]);
-    days[advent1 + 15].push(Office::unnamed_feria(FeriaRank::ThirdClass, true));
-    days[advent1 + 16].push(Office::unnamed_feria(FeriaRank::ThirdClass, true));
-    days[advent1 + 17].push(Office::named_feria(
+    days[cb.advent1 + 14].push(SUNDAYS_OF_ADVENT[2]);
+    days[cb.advent1 + 15].push(Office::unnamed_feria(FeriaRank::ThirdClass, true));
+    days[cb.advent1 + 16].push(Office::unnamed_feria(FeriaRank::ThirdClass, true));
+    days[cb.advent1 + 17].push(Office::named_feria(
         "fer-4-qt-advent",
         FeriaRank::ThirdClass,
         true,
     ));
-    days[advent1 + 18].push(Office::unnamed_feria(FeriaRank::ThirdClass, true));
-    days[advent1 + 19].push(Office::named_feria(
+    days[cb.advent1 + 18].push(Office::unnamed_feria(FeriaRank::ThirdClass, true));
+    days[cb.advent1 + 19].push(Office::named_feria(
         "fer-6-qt-advent",
         FeriaRank::ThirdClass,
         true,
     ));
-    days[advent1 + 20].push(Office::named_feria(
+    days[cb.advent1 + 20].push(Office::named_feria(
         "sab-qt-advent",
         FeriaRank::ThirdClass,
         false,
     ));
-    days[advent1 + 21].push(SUNDAYS_OF_ADVENT[3]);
+    days[cb.advent1 + 21].push(SUNDAYS_OF_ADVENT[3]);
     for day in 1..6 {
-        days[advent1 + 21 + day].push(Office::unnamed_feria(FeriaRank::ThirdClass, true));
+        days[cb.advent1 + 21 + day].push(Office::unnamed_feria(FeriaRank::ThirdClass, true));
     }
-    days[advent1 + 27].push(Office::unnamed_feria(FeriaRank::ThirdClass, false));
+    days[cb.advent1 + 27].push(Office::unnamed_feria(FeriaRank::ThirdClass, false));
     // Epiphany cycle
-    let epiphany = ordinal0(1, 6);
+    let epiphany_date = NaiveDate::from_ymd_opt(cb.year, 1, 6).expect("year out of range");
+    let epiphany = epiphany_date.ordinal0() as usize;
     days[epiphany].push(EPIPHANY);
     let inf_oct_epiph = EPIPHANY.day_within_octave().unwrap();
     for day in 1..7 {
@@ -515,13 +496,11 @@ fn temporal_cycle<'a>(year: i32) -> Vec<Vec<Office<'a>>> {
     }
     days[epiphany + 7].push(EPIPHANY.octave_day().unwrap());
 
-    let epiphany_date = NaiveDate::from_ymd_opt(year, 1, 6).expect("year out of range");
-    let epiphany = epiphany_date.ordinal0() as usize;
     let dom_post_epiph = epiphany + 7 - (epiphany_date.weekday().number_from_monday() as usize);
     let mut last_sunday_after_epiph = 0;
     for week in 0..7 {
         let ord = dom_post_epiph + (week * 7);
-        if ord >= septuagesima {
+        if ord >= cb.septuagesima() {
             break;
         }
         days[ord].push(SUNDAYS_AFTER_EPIPHANY[week]);
@@ -529,7 +508,7 @@ fn temporal_cycle<'a>(year: i32) -> Vec<Vec<Office<'a>>> {
     }
 
     // End of the Pentecost cycle
-    let post_pent_24 = advent1 - 7;
+    let post_pent_24 = cb.advent1 - 7;
     days[post_pent_24].push(Office::Sunday {
         id: "dom-24-post-pent",
         matins_id: None,
@@ -567,7 +546,7 @@ fn temporal_cycle<'a>(year: i32) -> Vec<Vec<Office<'a>>> {
         let Office::Sunday { id, .. } = SUNDAYS_AFTER_EPIPHANY[missing_sunday - 1] else {
             panic!()
         };
-        days[septuagesima - 1].push(Office::Feria {
+        days[cb.septuagesima() - 1].push(Office::Feria {
             id: Some(id),
             rank: FeriaRank::AnticipatedSunday,
             has_second_vespers: false,
@@ -593,7 +572,7 @@ fn temporal_cycle<'a>(year: i32) -> Vec<Vec<Office<'a>>> {
     }
 
     // omit everything from Christmas onwards; it will be dealt with later as a special case
-    for day in christmas..n_days {
+    for day in cb.christmas..n_days {
         days[day].truncate(0);
     }
 

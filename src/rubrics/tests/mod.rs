@@ -1,25 +1,24 @@
 use super::*;
 
-const CORPUS_CHRISTI: Office = Office::Feast(
-    FeastDetails::new("ssmi-corporis-christi", FeastRank::DoubleFirstClass)
-        .with_person(Person::OurLord)
-        .make_moveable()
-        .make_feriata(),
-);
+const CORPUS_CHRISTI: Office = Office::feast("ssmi-corporis-christi", FeastRank::DoubleFirstClass)
+    .with_person(Person::OurLord)
+    .make_moveable()
+    .make_feriatum()
+    .with_octave(OctaveRank::SecondOrder)
+    .done();
 
-const THOMAS_AP: Office = Office::Feast(
-    FeastDetails::new("s-thomas-ap", FeastRank::DoubleSecondClass).with_person(Person::Apostle),
-);
+const THOMAS_AP: Office = Office::feast("s-thomas-ap", FeastRank::DoubleSecondClass)
+    .with_person(Person::Apostle)
+    .make_feriatum()
+    .done();
 
-const EXALT_CRUCIS: Office = Office::Feast(FeastDetails::new(
-    "in-exaltatione-s-crucis",
-    FeastRank::GreaterDouble,
-));
+const EXALT_CRUCIS: Office =
+    Office::feast("in-exaltatione-s-crucis", FeastRank::GreaterDouble).done();
 
-const INVENT_STEPHEN: Office = Office::Feast(
-    FeastDetails::new("inventio-s-stephani-protomartyris", FeastRank::Semidouble)
-        .with_sub_rank(FeastSubRank::Secondary),
-);
+const INVENT_STEPHEN: Office =
+    Office::feast("inventio-s-stephani-protomartyris", FeastRank::Semidouble)
+        .with_sub_rank(FeastSubRank::Secondary)
+        .done();
 
 const DOM_15_POST_PENT: Office = Office::Sunday {
     id: "dom-15-post-pent",
@@ -39,28 +38,12 @@ const DOM_SEPTUAGESIMA: Office = Office::Sunday {
     rank: SundayRank::SecondClass,
 };
 
-const ASSUMPTION_DET: FeastDetails =
-    FeastDetails::new("in-assumptione-bmv", FeastRank::DoubleFirstClass)
-        .with_person(Person::OurLady)
-        .with_octave(OctaveRank::Common)
-        .make_feriata();
-
-const ASSUMPTION: Office = Office::Feast(ASSUMPTION_DET);
-const VIGIL_ASSUMPTION: Office = Office::Vigil {
-    feast_details: ASSUMPTION_DET,
-    rank: VigilRank::Common,
-};
-
-const INF_OCT_ASSUMPTION: Office = Office::WithinOctave {
-    feast_details: ASSUMPTION_DET,
-    rank: OctaveRank::Common,
-    has_second_vespers: true,
-};
-
-const OCT_DAY_ASSUMPTION: Office = Office::OctaveDay {
-    feast_details: ASSUMPTION_DET,
-    rank: OctaveRank::Common,
-};
+const ASSUMPTION: Office = Office::feast("in-assumptione-bmv", FeastRank::DoubleFirstClass)
+    .with_person(Person::OurLady)
+    .with_octave(OctaveRank::Common)
+    .with_vigil(VigilRank::Common)
+    .make_feriatum()
+    .done();
 
 const ADVENT_FERIA: Office = Office::Feria {
     id: None,
@@ -76,17 +59,7 @@ const EMBER_WEDNESDAY: Office = Office::Feria {
     commemorated_at_vespers: false,
 };
 
-const SIMPLE_FEAST: Office = Office::Feast(FeastDetails {
-    id: "__simple__",
-    rank: FeastRank::Simple,
-    sub_rank: FeastSubRank::Primary,
-    person: Person::Other,
-    is_patron_or_titular: false,
-    is_local: false,
-    is_moveable: false,
-    octave: None,
-    is_feriata: false,
-});
+const SIMPLE_FEAST: Office = Office::feast("_simple_", FeastRank::Simple).done();
 
 const OUR_LADY_ON_SATURDAY: Office = Office::OurLadyOnSaturday;
 
@@ -108,7 +81,7 @@ fn occurrence() {
         }
     );
     assert_eq!(
-        rubrics.occurrence_outcome(VIGIL_ASSUMPTION, ADVENT_FERIA, false),
+        rubrics.occurrence_outcome(ASSUMPTION.vigil().unwrap(), ADVENT_FERIA, false),
         OccurrenceOutcome {
             office_to_celebrate: OfficeIs::DeSecundo,
             loser_is: LoserIs::Omitted,
@@ -129,7 +102,7 @@ fn occurrence() {
         }
     );
     assert_eq!(
-        rubrics.occurrence_outcome(EXALT_CRUCIS, OCT_DAY_ASSUMPTION, false),
+        rubrics.occurrence_outcome(EXALT_CRUCIS, ASSUMPTION.octave_day().unwrap(), false),
         OccurrenceOutcome {
             office_to_celebrate: OfficeIs::DeSecundo,
             loser_is: LoserIs::Commemorated,
@@ -143,7 +116,11 @@ fn occurrence() {
         }
     );
     assert_eq!(
-        rubrics.occurrence_outcome(INF_OCT_ASSUMPTION, OUR_LADY_ON_SATURDAY, false),
+        rubrics.occurrence_outcome(
+            ASSUMPTION.day_within_octave().unwrap(),
+            OUR_LADY_ON_SATURDAY,
+            false
+        ),
         OccurrenceOutcome {
             office_to_celebrate: OfficeIs::DePrimo,
             loser_is: LoserIs::Omitted,
@@ -154,8 +131,9 @@ fn occurrence() {
 #[test]
 fn concurrence() {
     let rubrics = Rubrics1939;
+    let inf_oct_assump = ASSUMPTION.day_within_octave().unwrap();
     assert_eq!(
-        rubrics.concurrence_outcome(INF_OCT_ASSUMPTION, INF_OCT_ASSUMPTION, false),
+        rubrics.concurrence_outcome(inf_oct_assump, inf_oct_assump, false),
         ConcurrenceOutcome {
             office_to_celebrate: VespersIs::DePraec,
             has_comm: false,
@@ -167,10 +145,11 @@ fn concurrence() {
 fn consecutive_days_in_octave() {
     let rubrics = Rubrics1939;
 
-    let praec_day = OrderedOffice::of_only(INF_OCT_ASSUMPTION);
+    let inf_oct_assump = ASSUMPTION.day_within_octave().unwrap();
+    let praec_day = OrderedOffice::of_only(inf_oct_assump);
     let seq_day = praec_day.clone();
-    let ov = rubrics.order_vespers(praec_day, seq_day, false);
-    assert_eq!(ov.vespers, Vespers::SecondVespers(INF_OCT_ASSUMPTION));
+    let ov = rubrics.order_vespers(&praec_day, &seq_day, false);
+    assert_eq!(ov.vespers, Vespers::SecondVespers(inf_oct_assump));
     assert!(ov.to_commemorate.is_empty());
 }
 
@@ -179,10 +158,11 @@ fn feria_with_greater_feria_comm_simple() {
     let rubrics = Rubrics1939;
 
     let praec_day = OrderedOffice::of_only(Office::Empty);
-    let (seq_day, _) = rubrics.order_office(vec![EMBER_WEDNESDAY, SIMPLE_FEAST]);
+    let offs = vec![EMBER_WEDNESDAY, SIMPLE_FEAST];
+    let (seq_day, _) = rubrics.order_office(&offs[..]);
     assert_eq!(seq_day.office_of_day, EMBER_WEDNESDAY);
     assert_eq!(seq_day.to_commemorate[0], SIMPLE_FEAST);
-    let ov = rubrics.order_vespers(praec_day, seq_day, false);
+    let ov = rubrics.order_vespers(&praec_day, &seq_day, false);
     assert_eq!(ov.vespers, Vespers::SecondVespers(Office::Empty));
     assert_eq!(
         ov.to_commemorate[0],
