@@ -7,7 +7,6 @@ pub mod calendar1939;
 #[cfg(test)]
 mod tests;
 
-use crate::ordo::*;
 use crate::rubrics::*;
 
 #[derive(Debug, Clone, Copy)]

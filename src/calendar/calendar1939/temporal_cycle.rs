@@ -52,11 +52,16 @@ const SUNDAY_WITHIN_OCT_NAT: Office = Office::Sunday {
     rank: SundayRank::WithinOctave(OctaveRank::ThirdOrder),
 };
 
-const CIRCUMCISION: Office = Office::feast("in-circumcisione-domini", FeastRank::DoubleSecondClass)
+pub const CIRCUMCISION: Office =
+    Office::feast("in-circumcisione-domini", FeastRank::DoubleSecondClass)
+        .with_person(Person::OurLord)
+        .done();
+
+const HOLY_NAME: Office = Office::feast("ss-nominis-jesu", FeastRank::DoubleSecondClass)
     .with_person(Person::OurLord)
     .done();
 
-const HOLY_NAME: Office = Office::feast("ss-nominis-jesu", FeastRank::DoubleSecondClass)
+const HOLY_FAMILY: Office = Office::feast("s-familiae-jmj", FeastRank::GreaterDouble)
     .with_person(Person::OurLord)
     .done();
 
@@ -563,7 +568,7 @@ impl Calendar1939 {
         days[holy_name].push(HOLY_NAME);
 
         // Epiphany cycle
-        let epiphany_date = NaiveDate::from_ymd_opt(ch.year, 1, 6).expect("year out of range");
+        let epiphany_date = NaiveDate::from_ymd_opt(ch.year, 1, 6).unwrap();
         let epiphany = epiphany_date.ordinal0() as usize;
         days[epiphany - 1].push(EPIPHANY.vigil().unwrap());
         days[epiphany].push(EPIPHANY);
@@ -574,8 +579,15 @@ impl Calendar1939 {
         days[epiphany + 7].push(EPIPHANY.octave_day().unwrap());
 
         let dom_post_epiph = ch.sunday_after(epiphany).unwrap();
-        let mut last_sunday_after_epiph = 0;
-        for (week, &sunday) in SUNDAYS_AFTER_EPIPHANY.iter().enumerate() {
+        let holy_family = if dom_post_epiph == ch.ordinal0(1, 13) {
+            dom_post_epiph - 1
+        } else {
+            dom_post_epiph
+        };
+        days[holy_family].push(SUNDAYS_AFTER_EPIPHANY[0]);
+        days[holy_family].push(HOLY_FAMILY);
+        let mut last_sunday_after_epiph = 1;
+        for (week, &sunday) in SUNDAYS_AFTER_EPIPHANY.iter().enumerate().skip(1) {
             let ord = dom_post_epiph + (week * 7);
             if ord >= ch.septuagesima() {
                 break;

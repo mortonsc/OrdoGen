@@ -1,7 +1,7 @@
 use chrono::{Datelike, NaiveDate};
 use std::collections::VecDeque;
 
-use crate::calendar::calendar1939::christmastide::CIRCUMCISION;
+use crate::calendar::calendar1939::temporal_cycle::CIRCUMCISION;
 use crate::calendar::{Calendar, CalendarHelper};
 use crate::rubrics::*;
 

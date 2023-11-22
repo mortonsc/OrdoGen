@@ -27,14 +27,20 @@ impl Rubrics1939 {
                 rank: FeastRank::DoubleFirstClass,
                 is_local: false,
                 ..
-            }) => 95,
+            }) => 96,
             Office::OctaveDay {
                 rank: OctaveRank::SecondOrder,
                 ..
-            } => 94,
+            } => 95,
             Office::Feast(FeastDetails {
                 rank: FeastRank::DoubleFirstClass,
                 is_local: true,
+                ..
+            }) => 94,
+            // special case since Holy Family is nominally a greater double
+            // but it needs to outrank the Sunday in the octave of the Epiphany
+            Office::Feast(FeastDetails {
+                id: "s-familiae-jmj",
                 ..
             }) => 93,
             Office::Sunday {
@@ -396,8 +402,16 @@ impl RubricsSystem for Rubrics1939 {
         assert!(self.has_first_vespers(seq, seq_is_sunday));
         // special case for feasts in the octave of the nativity
         if let (
-            Office::Feast(FeastDetails { id: praec_id, .. }),
-            Office::Feast(FeastDetails { id: seq_id, .. }),
+            Office::Feast(FeastDetails {
+                id: praec_id,
+                rank: FeastRank::DoubleSecondClass,
+                ..
+            }),
+            Office::Feast(FeastDetails {
+                id: seq_id,
+                rank: FeastRank::DoubleSecondClass,
+                ..
+            }),
         ) = (praec, seq)
         {
             if matches!(

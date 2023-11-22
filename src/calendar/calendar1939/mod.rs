@@ -1,8 +1,6 @@
 use super::*;
-use crate::ordo::*;
 use crate::rubrics::*;
 
-pub mod christmastide;
 pub mod sanctoral_cycle;
 pub mod temporal_cycle;
 
