@@ -1,6 +1,7 @@
 use chrono::{Datelike, NaiveDate};
 use std::collections::VecDeque;
 
+use crate::calendar::calendar1939::christmastide::CIRCUMCISION;
 use crate::calendar::{Calendar, CalendarHelper};
 use crate::rubrics::*;
 
@@ -88,20 +89,21 @@ impl<'a> Ordo<'a> {
             let vespers = rubrics_system.order_vespers(
                 &all_lauds[day],
                 &all_lauds[day + 1],
-                ch.is_sunday(day),
+                ch.is_sunday(day + 1),
             );
             entries.push(OrdoEntry {
                 lauds: all_lauds[day].clone(),
                 vespers,
             });
         }
-        let dec_23 = ch.ordinal0(12, 23);
-        let christmastide_entries =
-            calendar.order_christmastide(ch.year, entries[dec_23].lauds.clone());
-        for idx in 0..christmastide_entries.len() - 1 {
-            entries[dec_23 + idx] = christmastide_entries[idx].clone();
-        }
-        entries.push(christmastide_entries[christmastide_entries.len() - 1].clone());
+        let dec31 = ch.n_days() - 1;
+        let lauds_next_year = OrderedOffice::of(CIRCUMCISION);
+        let vespers_dec31 =
+            rubrics_system.order_vespers(&all_lauds[dec31], &lauds_next_year, ch.is_sunday(dec31));
+        entries.push(OrdoEntry {
+            lauds: all_lauds[dec31].clone(),
+            vespers: vespers_dec31,
+        });
 
         Self { year, entries }
     }

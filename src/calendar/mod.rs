@@ -40,11 +40,6 @@ impl CalendarHelper {
         }
     }
     pub fn ordinal0(self, month: u32, day: u32) -> usize {
-        let day = if is_leap_year(self.year) && month == 2 && day >= 24 {
-            day + 1
-        } else {
-            day
-        };
         NaiveDate::from_ymd_opt(self.year, month, day)
             .expect("invalid date")
             .ordinal0() as usize
@@ -103,11 +98,6 @@ pub trait Calendar {
     fn calendar_of_saints<'a>(&self) -> &[CalendarEntry<'a>];
     fn sanctoral_cycle<'a>(&self, year: i32) -> Vec<Vec<Office<'a>>>;
     // returns a vec of the ordo entries for Dec 23 - 31
-    fn order_christmastide<'a>(
-        &self,
-        year: i32,
-        lauds_dec23: OrderedOffice<'a>,
-    ) -> Vec<OrdoEntry<'a>>;
     fn sanctoral_cycle_h<'a>(
         &self,
         ch: CalendarHelper,
@@ -148,6 +138,11 @@ pub trait Calendar {
         days[all_souls].push(Office::AllSouls);
 
         for &(month, day, feast_details) in calendar {
+            let day = if month == 2 && day >= 24 && is_leap_year(ch.year) {
+                day + 1
+            } else {
+                day
+            };
             let ord = ch.ordinal0(month, day);
             let off = Office::Feast(feast_details);
             days[ord].push(off);

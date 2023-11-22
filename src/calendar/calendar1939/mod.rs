@@ -23,11 +23,4 @@ impl Calendar for Calendar1939 {
         self.add_moveable_feasts(ch, &mut days);
         self.sanctoral_cycle_h(ch, Rubrics1939, days)
     }
-    fn order_christmastide<'a>(
-        &self,
-        year: i32,
-        lauds_dec23: OrderedOffice<'a>,
-    ) -> Vec<OrdoEntry<'a>> {
-        self.order_christmastide_h(year, lauds_dec23)
-    }
 }

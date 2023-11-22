@@ -23,6 +23,43 @@ pub const SUNDAYS_OF_ADVENT: [Office; 4] = [
     },
 ];
 
+const NATIVITY: Office = Office::feast("nativitas-dnjc", FeastRank::DoubleFirstClass)
+    .with_person(Person::OurLord)
+    .with_octave(OctaveRank::ThirdOrder)
+    .with_vigil(VigilRank::FirstClass)
+    .done();
+
+const ST_STEPHEN: Office = Office::feast("s-stephani-protomartyris", FeastRank::DoubleSecondClass)
+    .with_octave(OctaveRank::Simple)
+    .done();
+
+const ST_JOHN_EV: Office = Office::feast("s-joannis-ap-ev", FeastRank::DoubleSecondClass)
+    .with_person(Person::Apostle)
+    .with_octave(OctaveRank::Simple)
+    .done();
+
+const HOLY_INNOCENTS: Office = Office::feast("ss-innocentium-mm", FeastRank::DoubleSecondClass)
+    .with_octave(OctaveRank::Simple)
+    .done();
+
+const ST_THOMAS_BECKET: Office = Office::feast("s-thomas-em", FeastRank::Double).done();
+
+const ST_SILVESTER: Office = Office::feast("s-silvestri-i-pc", FeastRank::Double).done();
+
+const SUNDAY_WITHIN_OCT_NAT: Office = Office::Sunday {
+    id: "dom-inf-oct-nat",
+    matins_id: None,
+    rank: SundayRank::WithinOctave(OctaveRank::ThirdOrder),
+};
+
+const CIRCUMCISION: Office = Office::feast("in-circumcisione-domini", FeastRank::DoubleSecondClass)
+    .with_person(Person::OurLord)
+    .done();
+
+const HOLY_NAME: Office = Office::feast("ss-nominis-jesu", FeastRank::DoubleSecondClass)
+    .with_person(Person::OurLord)
+    .done();
+
 const SUNDAYS_AFTER_EPIPHANY: [Office; 6] = [
     Office::Sunday {
         id: "dom-inf-oct-epiph",
@@ -486,9 +523,45 @@ impl Calendar1939 {
         ));
         days[ch.advent1 + 21].push(SUNDAYS_OF_ADVENT[3]);
         for day in 1..6 {
-            days[ch.advent1 + 21 + day].push(Office::unnamed_feria(FeriaRank::ThirdClass, true));
+            let ord = ch.advent1 + 21 + day;
+            if ord >= ch.christmas - 1 {
+                break;
+            }
+            days[ord].push(Office::unnamed_feria(FeriaRank::ThirdClass, true));
         }
-        days[ch.advent1 + 27].push(Office::unnamed_feria(FeriaRank::ThirdClass, false));
+
+        // Christmas cycle
+        days[ch.christmas - 1].push(NATIVITY.vigil().unwrap());
+        days[ch.christmas].push(NATIVITY);
+        let inf_oct_nat = NATIVITY.day_within_octave().unwrap();
+        for day in 1..7 {
+            days[ch.christmas + day].push(inf_oct_nat)
+        }
+        days[ch.christmas + 1].push(ST_STEPHEN);
+        days[ch.christmas + 2].push(ST_JOHN_EV);
+        days[ch.christmas + 3].push(HOLY_INNOCENTS);
+        days[ch.christmas + 4].push(ST_THOMAS_BECKET);
+        days[ch.christmas + 6].push(ST_SILVESTER);
+        let sunday_inf_oct_nat = ch.sunday_after(ch.christmas);
+        // If there is no Sunday within the octave, or it falls on one of the first 3 days,
+        // the Sunday within the octave is celebrated on the 29th
+        // TODO: account for local calendars
+        let sunday_inf_oct_nat = match sunday_inf_oct_nat.map(|d| d - ch.christmas) {
+            None | Some(1..=3) => ch.ordinal0(12, 30),
+            Some(_) => sunday_inf_oct_nat.unwrap(),
+        };
+        days[sunday_inf_oct_nat].push(SUNDAY_WITHIN_OCT_NAT);
+        days[0].push(CIRCUMCISION);
+        days[1].push(ST_STEPHEN.octave_day().unwrap());
+        days[2].push(ST_JOHN_EV.octave_day().unwrap());
+        days[3].push(HOLY_INNOCENTS.octave_day().unwrap());
+
+        // Holy Name is celebrated on the Sunday between Jan 2 and Jan 5,
+        // or on Jan 2 if there is no such Sunday
+        let holy_name = ch.sunday_after(0).unwrap();
+        let holy_name = if holy_name > 4 { 1 } else { holy_name };
+        days[holy_name].push(HOLY_NAME);
+
         // Epiphany cycle
         let epiphany_date = NaiveDate::from_ymd_opt(ch.year, 1, 6).expect("year out of range");
         let epiphany = epiphany_date.ordinal0() as usize;
@@ -573,11 +646,6 @@ impl Calendar1939 {
                     days[ord].push(office);
                 }
             }
-        }
-
-        // omit everything from Christmas onwards; it will be dealt with later as a special case
-        for entry in days.iter_mut().skip(ch.christmas) {
-            entry.truncate(0);
         }
 
         days

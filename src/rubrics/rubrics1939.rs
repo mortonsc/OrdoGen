@@ -173,7 +173,7 @@ impl Rubrics1939 {
                     rank: VigilRank::SecondClass,
                     ..
                 },
-            ) => 18,
+            ) => 19,
             (true, Office::OctaveDay { rank, .. }) if rank >= OctaveRank::ThirdOrder => 17,
             (false, Office::Sunday { .. }) => 16,
             (
@@ -394,6 +394,32 @@ impl RubricsSystem for Rubrics1939 {
     ) -> ConcurrenceOutcome {
         assert!(self.has_second_vespers(praec));
         assert!(self.has_first_vespers(seq, seq_is_sunday));
+        // special case for feasts in the octave of the nativity
+        if let (
+            Office::Feast(FeastDetails { id: praec_id, .. }),
+            Office::Feast(FeastDetails { id: seq_id, .. }),
+        ) = (praec, seq)
+        {
+            if matches!(
+                (praec_id, seq_id),
+                ("s-stephani-protomartyris", "s-joannis-ap-ev")
+                    | ("s-joannis-ap-ev", "ss-innocentium-mm")
+            ) {
+                return ConcurrenceOutcome {
+                    office_to_celebrate: VespersIs::DePraec,
+                    has_comm: true,
+                };
+            }
+            if matches!(
+                (praec_id, seq_id),
+                ("in-circumcisione-domini", "ss-nominis-jesu")
+            ) {
+                return ConcurrenceOutcome {
+                    office_to_celebrate: VespersIs::DePraec,
+                    has_comm: false,
+                };
+            }
+        }
         let office_to_celebrate = self.compare_precedence_conc(praec, seq);
         let has_comm = match office_to_celebrate {
             VespersIs::DePraec => self.praec_admits_commemoration(praec, seq, seq_is_sunday),
@@ -556,6 +582,16 @@ impl RubricsSystem for Rubrics1939 {
         if matches!(
             praec,
             Office::Feast(FeastDetails {
+                id: "in-circumcisione-domini",
+                ..
+            })
+        ) {
+            return false;
+        }
+        // TODO: 1st class feasts of the Lord admit fewer commemorations
+        if matches!(
+            praec,
+            Office::Feast(FeastDetails {
                 rank: FeastRank::DoubleFirstClass | FeastRank::DoubleSecondClass,
                 ..
             })
@@ -563,6 +599,7 @@ impl RubricsSystem for Rubrics1939 {
             return match seq {
                 Office::Feast(FeastDetails { rank, .. }) => rank >= FeastRank::Semidouble,
                 Office::WithinOctave { rank, .. } => rank >= OctaveRank::ThirdOrder,
+                Office::OctaveDay { rank, .. } => rank >= OctaveRank::Common,
                 Office::OurLadyOnSaturday => false,
                 _ => true,
             };
@@ -577,16 +614,28 @@ impl RubricsSystem for Rubrics1939 {
         if praec.is_of_same_subject(seq) {
             return false;
         }
+        if matches!(
+            seq,
+            Office::Feast(FeastDetails {
+                id: "nativitas-dnjc" | "in-circumcisione-domini",
+                ..
+            })
+        ) {
+            return false;
+        }
         match seq.feast_rank() {
             Some(FeastRank::DoubleFirstClass) => match praec {
                 Office::Feast(FeastDetails { rank, .. }) => rank >= FeastRank::DoubleSecondClass,
                 Office::WithinOctave { rank, .. } => rank >= OctaveRank::ThirdOrder,
-                Office::OctaveDay { rank, .. } => rank >= OctaveRank::ThirdOrder,
+                // TODO: check
+                Office::OctaveDay { rank, .. } => rank > OctaveRank::Common,
                 _ => true,
             },
             Some(FeastRank::DoubleSecondClass) => match praec {
                 Office::Feast(FeastDetails { rank, .. }) => rank >= FeastRank::Double,
                 Office::WithinOctave { rank, .. } => rank >= OctaveRank::ThirdOrder,
+                // TODO: check
+                Office::OctaveDay { rank, .. } => rank > OctaveRank::Common,
                 _ => true,
             },
             _ => true,
