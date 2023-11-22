@@ -101,7 +101,8 @@ impl Rubrics1939 {
             } => 24,
             Office::Feria {
                 rank:
-                    FeriaRank::SecondClass
+                    FeriaRank::FridayAfterOctAsc
+                    | FeriaRank::SecondClass
                     | FeriaRank::ThirdClass
                     | FeriaRank::ThirdClassAdvent
                     | FeriaRank::AnticipatedSunday,
@@ -247,24 +248,53 @@ impl Rubrics1939 {
     }
     fn commemoration_ordering_key(&self, off: Office) -> u32 {
         match off {
-            Office::Feast(FeastDetails { rank, .. }) if rank >= FeastRank::GreaterDouble => 9,
-            Office::OctaveDay { .. } => 9, // not explicit in the rubrics; maybe should tie with greater double?
-            Office::Feast(FeastDetails {
-                rank: FeastRank::Double,
-                ..
-            }) => 8,
-            Office::Sunday { .. } => 7,
-            Office::Feast(FeastDetails {
-                rank: FeastRank::Semidouble,
-                ..
-            }) => 6,
+            Office::Sunday { .. } => 15,
             Office::Vigil {
                 rank: VigilRank::SecondClass,
                 ..
-            } => 6,
-            Office::WithinOctave { .. } => 5,
-            Office::Feria { .. } => 4,
-            Office::Vigil { .. } => 4,
+            } => 15,
+            // the rubrics don't say this explicitly but generally they treats anticipated Sundays
+            // the same as other Sundays it less they explicitly distinguish them
+            Office::Feria {
+                rank: FeriaRank::AnticipatedSunday,
+                ..
+            } => 15,
+            Office::WithinOctave {
+                rank: OctaveRank::SecondOrder,
+                ..
+            } => 14,
+            Office::OctaveDay { rank, .. } if rank >= OctaveRank::Common => 13,
+            Office::Feast(FeastDetails {
+                rank: FeastRank::GreaterDouble,
+                ..
+            }) => 12,
+            Office::Feast(FeastDetails {
+                rank: FeastRank::Double,
+                ..
+            }) => 11,
+            Office::Feast(FeastDetails {
+                rank: FeastRank::Semidouble,
+                ..
+            }) => 10,
+            Office::WithinOctave {
+                rank: OctaveRank::ThirdOrder,
+                ..
+            } => 9,
+            Office::WithinOctave {
+                rank: OctaveRank::Common,
+                ..
+            } => 8,
+            // TODO: Friday after oct asc => 7
+            Office::Feria { rank, .. } if rank > FeriaRank::Common => 6,
+            Office::Vigil {
+                rank: VigilRank::Common,
+                ..
+            } => 5,
+            Office::OctaveDay {
+                rank: OctaveRank::Simple,
+                ..
+            } => 4,
+            // TODO: ordering between OLOS and a simple feast/octave day isn't explicit in the rubrics
             Office::OurLadyOnSaturday => 3,
             Office::Feast(FeastDetails {
                 rank: FeastRank::Simple | FeastRank::Commemoration,
@@ -366,7 +396,7 @@ impl RubricsSystem for Rubrics1939 {
             Office::Feast(FeastDetails { rank, .. }) => rank < FeastRank::DoubleSecondClass,
             Office::WithinOctave { rank, .. } => rank < OctaveRank::SecondOrder,
             Office::Feria { rank, .. } => rank < FeriaRank::Privileged,
-            Office::Vigil { rank, .. } => rank < VigilRank::FirstClass,
+            Office::Vigil { rank, .. } => rank < VigilRank::SecondClass,
             Office::AllSouls => false,
             _ => true,
         }
@@ -376,8 +406,8 @@ impl RubricsSystem for Rubrics1939 {
         let office_to_celebrate = match ord {
             // the rubrics assume there will never be occuring feasts of perfectly equal precedence
             // so how we treat that case is arbitrary
-            Ordering::Greater | Ordering::Equal => OfficeIs::DePrimo,
-            Ordering::Less => OfficeIs::DeSecundo,
+            Ordering::Greater | Ordering::Equal => OfficeIs::OfTheFirst,
+            Ordering::Less => OfficeIs::OfTheSecond,
         };
         let (winner, loser) = office_to_celebrate.winner_first(occ1, occ2);
         let loser_is = if self.is_translated(loser) {
@@ -420,7 +450,7 @@ impl RubricsSystem for Rubrics1939 {
                     | ("s-joannis-ap-ev", "ss-innocentium-mm")
             ) {
                 return ConcurrenceOutcome {
-                    office_to_celebrate: VespersIs::DePraec,
+                    office_to_celebrate: VespersIs::OfThePreceding,
                     has_comm: true,
                 };
             }
@@ -429,15 +459,15 @@ impl RubricsSystem for Rubrics1939 {
                 ("in-circumcisione-domini", "ss-nominis-jesu")
             ) {
                 return ConcurrenceOutcome {
-                    office_to_celebrate: VespersIs::DePraec,
+                    office_to_celebrate: VespersIs::OfThePreceding,
                     has_comm: false,
                 };
             }
         }
         let office_to_celebrate = self.compare_precedence_conc(praec, seq);
         let has_comm = match office_to_celebrate {
-            VespersIs::DePraec => self.praec_admits_commemoration(praec, seq, seq_is_sunday),
-            VespersIs::DeSeq | VespersIs::ACapSeq => {
+            VespersIs::OfThePreceding => self.praec_admits_commemoration(praec, seq, seq_is_sunday),
+            VespersIs::OfTheFollowing | VespersIs::SplitAtCap => {
                 self.seq_admits_commemoration(praec, seq, seq_is_sunday)
             }
         };
@@ -476,7 +506,7 @@ impl RubricsSystem for Rubrics1939 {
     }
     fn compare_precedence_conc(&self, praec: Office, seq: Office) -> VespersIs {
         if seq.is_empty() {
-            return VespersIs::DePraec;
+            return VespersIs::OfThePreceding;
         }
         // hacky special case for successive days in octaves
         if let (
@@ -489,7 +519,7 @@ impl RubricsSystem for Rubrics1939 {
         ) = (praec, seq)
         {
             if fd1.id == fd2.id {
-                return VespersIs::DePraec;
+                return VespersIs::OfThePreceding;
             }
         }
         let ord = self
@@ -497,9 +527,9 @@ impl RubricsSystem for Rubrics1939 {
             .cmp(&self.precedence_key_conc(false, seq))
             .then(self.compare_feast_precedence(praec, seq));
         match ord {
-            Ordering::Greater => VespersIs::DePraec,
-            Ordering::Equal => VespersIs::ACapSeq,
-            Ordering::Less => VespersIs::DeSeq,
+            Ordering::Greater => VespersIs::OfThePreceding,
+            Ordering::Equal => VespersIs::SplitAtCap,
+            Ordering::Less => VespersIs::OfTheFollowing,
         }
     }
     // Less = is commemorated first
@@ -573,6 +603,7 @@ impl RubricsSystem for Rubrics1939 {
                 } => false,
                 Office::Vigil { .. } => false,
                 Office::Feast(FeastDetails { rank, .. }) => rank > FeastRank::Simple,
+                Office::Feria { rank, .. } => rank > FeriaRank::FridayAfterOctAsc,
                 _ => true,
             },
             Some(FeastRank::DoubleSecondClass) => !matches!(

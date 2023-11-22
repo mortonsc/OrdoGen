@@ -7,7 +7,7 @@ use crate::rubrics::*;
 
 #[derive(Clone)]
 pub struct OrdoEntry<'a> {
-    pub lauds: OrderedOffice<'a>,
+    pub lauds: OrderedLauds<'a>,
     pub vespers: OrderedVespers<'a>,
 }
 
@@ -25,7 +25,7 @@ impl<'a> Ordo<'a> {
         assert!(temporal.len() == sanctoral.len());
         // TODO: the octave of Christmas has to be special-cased
         let mut entries: Vec<OrdoEntry<'a>> = Vec::new();
-        let mut all_lauds: Vec<OrderedOffice<'a>> = Vec::new();
+        let mut all_lauds: Vec<OrderedLauds<'a>> = Vec::new();
         let mut to_translate: VecDeque<Office<'a>> = VecDeque::new();
         for day in 0..temporal.len() {
             let mut offices = temporal[day].clone();
@@ -47,14 +47,14 @@ impl<'a> Ordo<'a> {
                 .into_iter()
                 .filter(|&o| !to_translate.iter().any(|t| t.is_of_same_feast(o)))
                 .collect();
-            let (lauds, new_to_translate) = rubrics_system.order_office(&offices[..]);
+            let (lauds, new_to_translate) = rubrics_system.order_lauds(&offices[..]);
             let lauds = if !to_translate.is_empty()
                 && rubrics_system.admits_translated_feast(lauds.office_of_day)
             {
                 assert!(new_to_translate.is_empty());
                 let mut new_offs_of_day = offices.clone();
                 new_offs_of_day.push(to_translate.pop_front().unwrap());
-                let (new_lauds, no_translations) = rubrics_system.order_office(&new_offs_of_day);
+                let (new_lauds, no_translations) = rubrics_system.order_lauds(&new_offs_of_day);
                 assert!(no_translations.is_empty());
                 new_lauds
             } else {
@@ -80,7 +80,7 @@ impl<'a> Ordo<'a> {
                     offices.push(antic_sunday);
                 }
                 offices.extend_from_slice(&(sanctoral[antic_day])[..]);
-                let (lauds, no_translations) = rubrics_system.order_office(&offices[..]);
+                let (lauds, no_translations) = rubrics_system.order_lauds(&offices[..]);
                 assert!(no_translations.is_empty());
                 all_lauds[antic_day] = lauds
             }
@@ -97,7 +97,7 @@ impl<'a> Ordo<'a> {
             });
         }
         let dec31 = ch.n_days() - 1;
-        let lauds_next_year = OrderedOffice::of(CIRCUMCISION);
+        let lauds_next_year = OrderedLauds::of(CIRCUMCISION);
         let vespers_dec31 =
             rubrics_system.order_vespers(&all_lauds[dec31], &lauds_next_year, ch.is_sunday(dec31));
         entries.push(OrdoEntry {

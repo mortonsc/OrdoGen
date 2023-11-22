@@ -98,59 +98,54 @@ const SUNDAYS_AFTER_EPIPHANY: [Office; 6] = [
     },
 ];
 
-const EPIPHANY: Office = Office::Feast(
-    FeastDetails::new("in-epiphania-dnjc", FeastRank::DoubleFirstClass)
-        .with_person(Person::OurLord)
-        .make_feriatum()
-        .with_vigil(VigilRank::SecondClass)
-        .with_octave(OctaveRank::SecondOrder),
-);
+const EPIPHANY: Office = Office::feast("in-epiphania-dnjc", FeastRank::DoubleFirstClass)
+    .with_person(Person::OurLord)
+    .make_feriatum()
+    .with_vigil(VigilRank::SecondClass)
+    .with_octave(OctaveRank::SecondOrder)
+    .done();
 
-const EASTER: Office = Office::Feast(
-    FeastDetails::new("dom-resurrectionis", FeastRank::DoubleFirstClass)
-        .with_person(Person::OurLord)
-        .make_feriatum()
-        .with_octave(OctaveRank::FirstOrder)
-        .make_moveable(),
-);
+const EASTER: Office = Office::feast("dom-resurrectionis", FeastRank::DoubleFirstClass)
+    .with_person(Person::OurLord)
+    .make_feriatum()
+    .with_octave(OctaveRank::FirstOrder)
+    .make_moveable()
+    .done();
 
-const ASCENSION: Office = Office::Feast(
-    FeastDetails::new("in-ascensione-dnjc", FeastRank::DoubleFirstClass)
-        .with_person(Person::OurLord)
-        .make_feriatum()
-        .with_octave(OctaveRank::ThirdOrder)
-        .make_moveable(),
-);
+const ASCENSION: Office = Office::feast("in-ascensione-dnjc", FeastRank::DoubleFirstClass)
+    .with_person(Person::OurLord)
+    .make_feriatum()
+    .with_vigil(VigilRank::Common)
+    .with_octave(OctaveRank::ThirdOrder)
+    .make_moveable()
+    .done();
 
-const PENTECOST: Office = Office::Feast(
-    FeastDetails::new("dom-pentecostes", FeastRank::DoubleFirstClass)
-        .with_person(Person::Trinity)
-        .make_feriatum()
-        .with_octave(OctaveRank::FirstOrder)
-        .make_moveable(),
-);
+const PENTECOST: Office = Office::feast("dom-pentecostes", FeastRank::DoubleFirstClass)
+    .with_person(Person::Trinity)
+    .make_feriatum()
+    .with_vigil(VigilRank::FirstClass)
+    .with_octave(OctaveRank::FirstOrder)
+    .make_moveable()
+    .done();
 
-const TRINITY_SUNDAY: Office = Office::Feast(
-    FeastDetails::new("dom-ss-trinitatis", FeastRank::DoubleFirstClass)
-        .with_person(Person::Trinity)
-        .make_feriatum()
-        .make_moveable(),
-);
+const TRINITY_SUNDAY: Office = Office::feast("dom-ss-trinitatis", FeastRank::DoubleFirstClass)
+    .with_person(Person::Trinity)
+    .make_feriatum()
+    .make_moveable()
+    .done();
 
-const CORPUS_CHRISTI: Office = Office::Feast(
-    FeastDetails::new("ss-corporis-christi", FeastRank::DoubleFirstClass)
-        .with_person(Person::OurLord)
-        .make_feriatum()
-        .with_octave(OctaveRank::SecondOrder)
-        .make_moveable(),
-);
+const CORPUS_CHRISTI: Office = Office::feast("ss-corporis-christi", FeastRank::DoubleFirstClass)
+    .with_person(Person::OurLord)
+    .make_feriatum()
+    .with_octave(OctaveRank::SecondOrder)
+    .make_moveable()
+    .done();
 
-const SACRED_HEART: Office = Office::Feast(
-    FeastDetails::new("ss-cordis-jesu", FeastRank::DoubleFirstClass)
-        .with_person(Person::OurLady)
-        .with_octave(OctaveRank::ThirdOrder)
-        .make_moveable(),
-);
+const SACRED_HEART: Office = Office::feast("ss-cordis-jesu", FeastRank::DoubleFirstClass)
+    .with_person(Person::OurLady)
+    .with_octave(OctaveRank::ThirdOrder)
+    .make_moveable()
+    .done();
 
 const N_EASTER_CYCLE_SUNDAYS: usize = 39;
 const EASTER_CYCLE_SUNDAYS: [Office; N_EASTER_CYCLE_SUNDAYS] = [
@@ -440,24 +435,23 @@ impl Calendar1939 {
 
         // Ascension and its octave
         let ascension = ch.easter + 39;
-        days[ascension - 1].push(Office::Vigil {
-            feast_details: ASCENSION.feast_details().unwrap(),
-            rank: VigilRank::Common,
-        });
+        days[ascension - 1].push(ASCENSION.vigil().unwrap());
         days[ascension].push(ASCENSION);
         let inf_oct_asc = ASCENSION.day_within_octave().unwrap();
         for day in 1..7 {
             days[ascension + day].push(inf_oct_asc);
         }
         days[ascension + 7].push(ASCENSION.octave_day().unwrap());
-        // TODO: special status for the following Friday
+        days[ascension + 8].push(Office::Feria {
+            id: Some("fer-6-post-oct-asc"),
+            rank: FeriaRank::FridayAfterOctAsc,
+            has_second_vespers: true,
+            commemorated_at_vespers: true,
+        });
 
         // Pentecost and its octave
         let pentecost = ch.easter + 49;
-        days[pentecost - 1].push(Office::Vigil {
-            rank: VigilRank::FirstClass,
-            feast_details: PENTECOST.feast_details().unwrap(),
-        });
+        days[pentecost - 1].push(PENTECOST.vigil().unwrap());
         let inf_oct_pent = PENTECOST.day_within_octave().unwrap();
         days[pentecost + 1].push(Office::named_feria(
             "fer-2-pentecostes",

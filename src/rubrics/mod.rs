@@ -157,6 +157,7 @@ pub enum FeriaRank {
     // Common ferias are equivalent to 1962 fourth class ferias
     // Privileged ferias are equivalent to 1962 first class ferias
     Common,
+    FridayAfterOctAsc,
     AnticipatedSunday,
     ThirdClassAdvent,
     ThirdClass,
@@ -367,15 +368,15 @@ impl<'a> Office<'a> {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OfficeIs {
-    DePrimo,
-    DeSecundo,
+    OfTheFirst,
+    OfTheSecond,
 }
 
 impl OfficeIs {
     fn winner_first<K: Copy>(self, first: K, second: K) -> (K, K) {
         match self {
-            Self::DePrimo => (first, second),
-            Self::DeSecundo => (second, first),
+            Self::OfTheFirst => (first, second),
+            Self::OfTheSecond => (second, first),
         }
     }
 }
@@ -404,17 +405,17 @@ pub enum Hour {
 // we consider the Vespers of the following day to be the "winner"
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum VespersIs {
-    DePraec,
-    DeSeq,
-    ACapSeq,
+    OfThePreceding,
+    OfTheFollowing,
+    SplitAtCap,
 }
 
 impl VespersIs {
     pub fn applied_to<'a>(&self, praec: Office<'a>, seq: Office<'a>) -> Vespers<'a> {
         match self {
-            VespersIs::DePraec => Vespers::SecondVespers(praec),
-            VespersIs::DeSeq => Vespers::FirstVespers(seq),
-            VespersIs::ACapSeq => Vespers::SplitAtCap(praec, seq),
+            VespersIs::OfThePreceding => Vespers::SecondVespers(praec),
+            VespersIs::OfTheFollowing => Vespers::FirstVespers(seq),
+            VespersIs::SplitAtCap => Vespers::SplitAtCap(praec, seq),
         }
     }
 }
@@ -429,7 +430,7 @@ impl ConcurrenceOutcome {
     pub fn seq_wins(&self) -> bool {
         matches!(
             self.office_to_celebrate,
-            VespersIs::DeSeq | VespersIs::ACapSeq
+            VespersIs::OfTheFollowing | VespersIs::SplitAtCap
         )
     }
     pub fn praec_wins(&self) -> bool {
@@ -438,12 +439,12 @@ impl ConcurrenceOutcome {
 }
 
 #[derive(Debug, Clone)]
-pub struct OrderedOffice<'a> {
+pub struct OrderedLauds<'a> {
     pub office_of_day: Office<'a>,
     pub to_commemorate: Vec<Office<'a>>,
 }
 
-impl<'a> OrderedOffice<'a> {
+impl<'a> OrderedLauds<'a> {
     pub fn of(off: Office<'a>) -> Self {
         Self {
             office_of_day: off,
@@ -523,12 +524,12 @@ pub trait RubricsSystem {
     // doesn't apply to the vigils of Christmas or Epiphany
     fn anticipate_vigils(&self) -> bool;
     fn admits_anticipated_sunday(&self, off: Office) -> bool;
-    fn order_office<'a>(&self, occs: &[Office<'a>]) -> (OrderedOffice<'a>, Vec<Office<'a>>) {
+    fn order_lauds<'a>(&self, occs: &[Office<'a>]) -> (OrderedLauds<'a>, Vec<Office<'a>>) {
         let mut to_commemorate: Vec<Office<'a>> = Vec::new();
         let mut to_translate: Vec<Office<'a>> = Vec::new();
         if occs.is_empty() {
             return (
-                OrderedOffice {
+                OrderedLauds {
                     office_of_day: Office::Empty,
                     to_commemorate,
                 },
@@ -541,7 +542,7 @@ pub trait RubricsSystem {
         // reverse because we want to deal with higher-ranked things first
         for &occ in occs.iter().rev() {
             let outcome = self.occurrence_outcome(office_of_day, occ);
-            assert_eq!(outcome.office_to_celebrate, OfficeIs::DePrimo);
+            assert_eq!(outcome.office_to_celebrate, OfficeIs::OfTheFirst);
             if outcome.loser_is == LoserIs::Translated {
                 to_translate.push(occ);
             } else if outcome.loser_is == LoserIs::Commemorated
@@ -554,7 +555,7 @@ pub trait RubricsSystem {
         }
         to_commemorate.sort_by(|&c1, &c2| self.compare_commemoration_order(c1, c2));
         (
-            OrderedOffice {
+            OrderedLauds {
                 office_of_day,
                 to_commemorate,
             },
@@ -563,8 +564,8 @@ pub trait RubricsSystem {
     }
     fn order_vespers<'a>(
         &self,
-        praec_day: &OrderedOffice<'a>,
-        seq_day: &OrderedOffice<'a>,
+        praec_day: &OrderedLauds<'a>,
+        seq_day: &OrderedLauds<'a>,
         seq_is_sunday: bool,
     ) -> OrderedVespers<'a> {
         let praec = if self.has_second_vespers(praec_day.office_of_day) {
@@ -593,6 +594,7 @@ pub trait RubricsSystem {
         } else if co.seq_wins() && co.has_comm {
             to_commemorate.push(VespersComm::SecondVespers(praec));
         }
+        let comm_of_praec_seq = !to_commemorate.is_empty();
         let comms_from_praec: Vec<VespersComm<'a>> = praec_day
             .to_commemorate
             .iter()
@@ -641,9 +643,11 @@ pub trait RubricsSystem {
             .map(|&off| VespersComm::FirstVespers(off))
             .collect();
 
-        to_commemorate.extend(chain(comms_from_praec, comms_from_seq));
-        // TODO: is there a specific ordering that should hold between 1V and 2V commemorations?
-        to_commemorate
+        // commemorations of 1V come before commemorations of 2V (all else being equal)
+        to_commemorate.extend(chain(comms_from_seq, comms_from_praec));
+        // the commemoration of the preceding/following office always comes first
+        let sort_start = if comm_of_praec_seq { 1 } else { 0 };
+        to_commemorate[sort_start..]
             .sort_by(|&c1, &c2| self.compare_commemoration_order(c1.office(), c2.office()));
         // remove commemorations of the same subject
         // assumes that the commemoration that comes later is the one that should be removed

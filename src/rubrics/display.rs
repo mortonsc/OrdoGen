@@ -34,6 +34,7 @@ impl fmt::Display for FeriaRank {
         let s = match self {
             Self::Common => "common",
             Self::AnticipatedSunday => "dom-antic",
+            Self::FridayAfterOctAsc => "sd",
             Self::ThirdClass => "3cl",
             Self::ThirdClassAdvent => "3cl",
             Self::SecondClass => "2cl",
@@ -94,7 +95,7 @@ impl<'a> fmt::Display for Office<'a> {
     }
 }
 
-impl<'a> fmt::Display for OrderedOffice<'a> {
+impl<'a> fmt::Display for OrderedLauds<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if self.to_commemorate.is_empty() {
             write!(f, "{}", self.office_of_day)
