@@ -78,8 +78,10 @@ impl CalendarHelper {
 }
 
 // TODO: feast of Our Lord and Our Lady
-const PURIFICATION: Office =
-    Office::feast("in-purificatione-bmv", FeastRank::DoubleSecondClass).done();
+const PURIFICATION: Office = Office::feast("in-purificatione-bmv", FeastRank::DoubleSecondClass)
+    .with_person(Person::OurLord)
+    .make_feriatum()
+    .done();
 
 const ANNUNCIATION: Office = Office::feast("in-annuntiatione-bmv", FeastRank::DoubleFirstClass)
     .with_person(Person::OurLady)

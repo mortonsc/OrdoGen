@@ -1,19 +1,22 @@
 use chrono::{Datelike, NaiveDate};
+use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 
 use crate::calendar::calendar1939::temporal_cycle::CIRCUMCISION;
 use crate::calendar::{Calendar, CalendarHelper};
 use crate::rubrics::*;
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct OrdoEntry<'a> {
+    #[serde(borrow)]
     pub lauds: OrderedLauds<'a>,
     pub vespers: OrderedVespers<'a>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Ordo<'a> {
     pub year: i32,
+    #[serde(borrow)]
     pub entries: Vec<OrdoEntry<'a>>,
 }
 

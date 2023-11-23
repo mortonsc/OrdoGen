@@ -312,7 +312,10 @@ impl Rubrics1939 {
         if let (Some(fd1), Some(fd2)) = (off1.assoc_feast_details(), off2.assoc_feast_details()) {
             fd1.rank
                 .cmp(&fd2.rank)
-                .then(true_is_greater(fd1.is_solemn(), fd2.is_solemn()))
+                .then(true_is_greater(
+                    off1.is_of_solemn_feast(),
+                    off2.is_of_solemn_feast(),
+                ))
                 .then(fd1.sub_rank.cmp(&fd2.sub_rank))
                 .then(fd1.person.cmp(&fd2.person))
                 .then(true_is_greater(fd1.is_local, fd2.is_local))
@@ -551,68 +554,65 @@ impl RubricsSystem for Rubrics1939 {
         if winner.is_of_same_subject(loser) {
             return false;
         }
-        if matches!(
-            winner,
-            Office::Feria {
+        match winner {
+            Office::AllSouls
+            | Office::Feria {
                 rank: FeriaRank::DoubleFirstClass,
                 ..
-            }
-        ) {
-            return false;
-        }
-        if winner == Office::AllSouls {
-            return false;
-        }
-        if winner.is_greater_feria() && loser.is_vigil() {
-            return false;
-        }
-        // In 1V of the Nativity Vigil, the occurring Sunday is not commemorated
-        if matches!(
-            winner,
+            } => false,
+            Office::Feria { rank, .. } if rank >= FeriaRank::AnticipatedSunday => !loser.is_vigil(),
+            // In 1V of the Nativity Vigil, the occurring Sunday is not commemorated
             Office::Vigil {
                 rank: VigilRank::FirstClass,
                 ..
+            } => {
+                if loser.is_sunday() {
+                    hour == Hour::Lauds
+                } else {
+                    true
+                }
             }
-        ) && matches!(loser, Office::Sunday { .. })
-            && hour != Hour::Lauds
-        {
-            return false;
-        }
-        if matches!(
-            winner,
             Office::Feast(FeastDetails {
                 rank: FeastRank::DoubleFirstClass,
                 sub_rank: FeastSubRank::Primary,
                 person: Person::OurLord | Person::Trinity,
                 is_local: false,
                 ..
-            })
-        ) && matches!(loser, Office::Feast(_))
-        {
-            return false;
-        }
-        match winner.feast_rank() {
-            Some(FeastRank::DoubleFirstClass) => match loser {
-                Office::OctaveDay {
-                    rank: OctaveRank::Simple,
-                    ..
-                } => false,
-                Office::WithinOctave {
-                    rank: OctaveRank::Common,
-                    ..
-                } => false,
-                Office::Vigil { .. } => false,
-                Office::Feast(FeastDetails { rank, .. }) => rank > FeastRank::Simple,
-                Office::Feria { rank, .. } => rank > FeriaRank::FridayAfterOctAsc,
-                _ => true,
+            }) => match loser {
+                Office::Sunday { .. } => true,
+                Office::Feria { rank, .. } => rank >= FeriaRank::AnticipatedSunday,
+                Office::Vigil { rank, .. } => rank >= VigilRank::SecondClass,
+                Office::WithinOctave { rank, .. } => rank >= OctaveRank::ThirdOrder,
+                // TODO not sure about this
+                Office::OctaveDay { rank, .. } => rank >= OctaveRank::ThirdOrder,
+                _ => false,
             },
-            Some(FeastRank::DoubleSecondClass) => !matches!(
-                loser,
-                Office::WithinOctave {
-                    rank: OctaveRank::Common,
-                    ..
+            Office::Feast(FeastDetails {
+                rank: FeastRank::DoubleFirstClass,
+                ..
+            }) => match loser {
+                Office::Sunday { .. } => true,
+                Office::Feria { rank, .. } => rank >= FeriaRank::AnticipatedSunday,
+                Office::Vigil { rank, .. } => rank >= VigilRank::SecondClass,
+                Office::WithinOctave { rank, .. } => rank >= OctaveRank::ThirdOrder,
+                Office::OctaveDay { rank, .. } => rank >= OctaveRank::Common,
+                Office::Feast(FeastDetails { rank, .. }) => rank >= FeastRank::Semidouble,
+                _ => false,
+            },
+            Office::Feast(FeastDetails {
+                rank: FeastRank::DoubleSecondClass,
+                ..
+            }) => match loser {
+                Office::Sunday { .. } => true,
+                Office::Feria { rank, .. } => rank >= FeriaRank::AnticipatedSunday,
+                Office::Vigil { .. } => true,
+                Office::WithinOctave { rank, .. } => rank >= OctaveRank::ThirdOrder,
+                Office::OctaveDay { rank, .. } => rank >= OctaveRank::Common || hour == Hour::Lauds,
+                Office::Feast(FeastDetails { rank, .. }) => {
+                    rank >= FeastRank::Semidouble || hour == Hour::Lauds
                 }
-            ),
+                _ => false,
+            },
             _ => true,
         }
     }
@@ -633,7 +633,7 @@ impl RubricsSystem for Rubrics1939 {
         ) {
             return false;
         }
-        // TODO: 1st class feasts of the Lord admit fewer commemorations
+        // TODO: 1st class feasts of the Lord admit fewer commemorations (?)
         if matches!(
             praec,
             Office::Feast(FeastDetails {
@@ -659,29 +659,39 @@ impl RubricsSystem for Rubrics1939 {
         if praec.is_of_same_subject(seq) {
             return false;
         }
-        if matches!(
-            seq,
+        match seq {
             Office::Feast(FeastDetails {
-                id: "nativitas-dnjc" | "in-circumcisione-domini",
+                id: "nativitas-dnjc" | "in-epiphania-dnjc",
                 ..
-            })
-        ) {
-            return false;
-        }
-        match seq.feast_rank() {
-            Some(FeastRank::DoubleFirstClass) => match praec {
+            }) => false,
+            Office::Feast(FeastDetails {
+                rank: FeastRank::DoubleFirstClass,
+                ..
+            }) => match praec {
+                Office::Sunday { .. } => true,
+                Office::Feria { rank, .. } => rank >= FeriaRank::ThirdClassAdvent,
                 Office::Feast(FeastDetails { rank, .. }) => rank >= FeastRank::DoubleSecondClass,
                 Office::WithinOctave { rank, .. } => rank >= OctaveRank::ThirdOrder,
-                // TODO: check
-                Office::OctaveDay { rank, .. } => rank > OctaveRank::Common,
-                _ => true,
+                Office::OctaveDay { rank, .. } => rank >= OctaveRank::ThirdOrder,
+                _ => false,
             },
-            Some(FeastRank::DoubleSecondClass) => match praec {
+            Office::Feast(FeastDetails {
+                id: "in-circumcisione-dnjc",
+                ..
+            }) => match praec {
+                Office::Feast(FeastDetails { rank, .. }) => rank >= FeastRank::DoubleSecondClass,
+                _ => false,
+            },
+            Office::Feast(FeastDetails {
+                rank: FeastRank::DoubleSecondClass,
+                ..
+            }) => match praec {
+                Office::Sunday { .. } => true,
+                Office::Feria { rank, .. } => rank >= FeriaRank::ThirdClassAdvent,
                 Office::Feast(FeastDetails { rank, .. }) => rank >= FeastRank::Double,
                 Office::WithinOctave { rank, .. } => rank >= OctaveRank::ThirdOrder,
-                // TODO: check
-                Office::OctaveDay { rank, .. } => rank > OctaveRank::Common,
-                _ => true,
+                Office::OctaveDay { .. } => true,
+                _ => false,
             },
             _ => true,
         }

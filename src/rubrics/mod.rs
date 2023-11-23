@@ -13,7 +13,7 @@ pub use rubrics1939::Rubrics1939;
 // TODO:
 // * The Purification is a feast both of our Lord and our Lady
 
-// convenience functions for comparison chains.
+// convenience function for comparison chains.
 fn true_is_greater(rhs: bool, lhs: bool) -> Ordering {
     match (rhs, lhs) {
         (true, false) => Ordering::Greater,
@@ -141,10 +141,6 @@ impl<'a> FeastDetails<'a> {
     pub const fn with_vigil(mut self, rank: VigilRank) -> Self {
         self.vigil = Some(rank);
         self
-    }
-    // this technical meaning of "solemn" is relevant to determining feast precedence
-    pub fn is_solemn(self) -> bool {
-        self.is_feriatum || self.octave.is_some()
     }
     pub const fn done(self) -> Office<'a> {
         Office::Feast(self)
@@ -277,21 +273,41 @@ impl<'a> Office<'a> {
     }
     // TODO: this doesn't fully deal with separate feasts of the same person
     // if the person doesn't have an explicit Person variant
-    // TODO: in particular there probably needs to be a special case for the commemoration of St
-    // Paul, which isn't commemorated at 2V of the Sts Peter and Paul the preceding day
     pub fn is_of_same_subject(self, other: Self) -> bool {
         // two days in the octave of the same feast are obviously of the same person
         // (and we can't always tell this by just looking at the Person field)
         if self.is_of_same_feast(other) {
             return true;
         }
-        if let (Some(p1), Some(p2)) = (self.person(), other.person()) {
+        if let (Some(fd1), Some(fd2)) = (self.assoc_feast_details(), other.assoc_feast_details()) {
             // the Persons lower-ranked than Joseph are categories, not specific persons
             // while different feasts of the Lord are considered to have different subjects
             // as they deal with different mysteries
-            p1 >= Person::Joseph && p1 != Person::OurLord && p1 == p2
-        } else {
-            false
+            if fd1.person >= Person::Joseph
+                && fd1.person != Person::OurLord
+                && fd1.person == fd2.person
+            {
+                return true;
+            }
+            if (fd1.id == "ss-petri-et-pauli-app" && fd2.id == "commemoratio-s-pauli-ap")
+                || (fd2.id == "ss-petri-et-pauli-app" && fd1.id == "commemoratio-s-pauli-ap")
+            {
+                return true;
+            }
+        }
+        false
+    }
+    // this technical meaning of "solemn" is relevant to determining feast precedence
+    pub fn is_of_solemn_feast(self) -> bool {
+        match self {
+            Self::Feast(feast_details) | Self::OctaveDay { feast_details, .. } => {
+                feast_details.is_feriatum || feast_details.octave.is_some()
+            }
+            // "Ratio tamen majoris solemnitatis per Octavam inductae consideranda tantum est in
+            // die Festo atque in die Octavae, non vero in diebus infra Octavam."
+            // Can't imagine when this would ever matter
+            Self::WithinOctave { feast_details, .. } => feast_details.is_feriatum,
+            _ => false,
         }
     }
     pub fn is_feast_of_the_lord(self) -> bool {
@@ -438,8 +454,9 @@ impl ConcurrenceOutcome {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OrderedLauds<'a> {
+    #[serde(borrow)]
     pub office_of_day: Office<'a>,
     pub to_commemorate: Vec<Office<'a>>,
 }
@@ -457,15 +474,17 @@ impl<'a> OrderedLauds<'a> {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Vespers<'a> {
+    #[serde(borrow)]
     FirstVespers(Office<'a>),
     SecondVespers(Office<'a>),
     SplitAtCap(Office<'a>, Office<'a>),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum VespersComm<'a> {
+    #[serde(borrow)]
     FirstVespers(Office<'a>),
     SecondVespers(Office<'a>),
 }
@@ -479,8 +498,9 @@ impl<'a> VespersComm<'a> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OrderedVespers<'a> {
+    #[serde(borrow)]
     pub vespers: Vespers<'a>,
     pub to_commemorate: Vec<VespersComm<'a>>,
 }
@@ -620,8 +640,6 @@ pub trait RubricsSystem {
             .filter(|&&off| {
                 // (pre-55) when two consecutive days within octaves are commemorated,
                 // the commemoration at Vespers is 2V of the first day
-                // this also removes 1V of the first day in an octave (though we would do that
-                // later anyways)
                 // in 1962 days in octaves don't have 1V so this does nothing
                 if let Office::WithinOctave { .. } = off {
                     !comms_from_praec

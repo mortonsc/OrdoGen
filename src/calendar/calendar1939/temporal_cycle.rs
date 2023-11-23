@@ -27,19 +27,23 @@ const NATIVITY: Office = Office::feast("nativitas-dnjc", FeastRank::DoubleFirstC
     .with_person(Person::OurLord)
     .with_octave(OctaveRank::ThirdOrder)
     .with_vigil(VigilRank::FirstClass)
+    .make_feriatum()
     .done();
 
 const ST_STEPHEN: Office = Office::feast("s-stephani-protomartyris", FeastRank::DoubleSecondClass)
     .with_octave(OctaveRank::Simple)
+    .make_feriatum()
     .done();
 
 const ST_JOHN_EV: Office = Office::feast("s-joannis-ap-ev", FeastRank::DoubleSecondClass)
     .with_person(Person::Apostle)
     .with_octave(OctaveRank::Simple)
+    .make_feriatum()
     .done();
 
 const HOLY_INNOCENTS: Office = Office::feast("ss-innocentium-mm", FeastRank::DoubleSecondClass)
     .with_octave(OctaveRank::Simple)
+    .make_feriatum()
     .done();
 
 const ST_THOMAS_BECKET: Office = Office::feast("s-thomas-em", FeastRank::Double).done();
@@ -55,10 +59,12 @@ const SUNDAY_WITHIN_OCT_NAT: Office = Office::Sunday {
 pub const CIRCUMCISION: Office =
     Office::feast("in-circumcisione-domini", FeastRank::DoubleSecondClass)
         .with_person(Person::OurLord)
+        .make_feriatum()
         .done();
 
 const HOLY_NAME: Office = Office::feast("ss-nominis-jesu", FeastRank::DoubleSecondClass)
     .with_person(Person::OurLord)
+    .make_secondary()
     .done();
 
 const HOLY_FAMILY: Office = Office::feast("s-familiae-jmj", FeastRank::GreaterDouble)
