@@ -1,8 +1,8 @@
 use chrono::{Datelike, NaiveDate};
+use log::debug;
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 
-use crate::calendar::calendar1939::temporal_cycle::CIRCUMCISION;
 use crate::calendar::{Calendar, CalendarHelper};
 use crate::rubrics::*;
 
@@ -23,28 +23,28 @@ pub struct Ordo<'a> {
 impl<'a> Ordo<'a> {
     pub fn new(calendar: impl Calendar, rubrics_system: impl RubricsSystem, year: i32) -> Self {
         let ch = CalendarHelper::new(year);
-        let temporal = calendar.temporal_cycle(year);
-        let sanctoral = calendar.sanctoral_cycle(year);
-        assert!(temporal.len() == sanctoral.len());
-        // TODO: the octave of Christmas has to be special-cased
+        let days = calendar.generate(year);
         let mut entries: Vec<OrdoEntry<'a>> = Vec::new();
         let mut all_lauds: Vec<OrderedLauds<'a>> = Vec::new();
         let mut to_translate: VecDeque<Office<'a>> = VecDeque::new();
-        for day in 0..temporal.len() {
-            let mut offices = temporal[day].clone();
-            // remove anticipated Sunday to deal with later
-            let antic_sunday: Option<Office<'a>> = if let Some(Office::Feria {
-                rank: FeriaRank::AnticipatedSunday,
-                ..
-            }) = offices.get(0)
-            {
-                // hacky but this should always work
-                assert!(temporal[day].len() == 1);
-                offices.pop()
+        for day in 0..days.len() {
+            let mut offices = days[day].clone();
+            // remove an anticipated Sunday to deal with it later
+            let antic_sunday_idx = offices.iter().position(|o| {
+                matches!(
+                    o,
+                    Office::Feria {
+                        rank: FeriaRank::AnticipatedSunday,
+                        ..
+                    }
+                )
+            });
+            let antic_sunday = if let Some(idx) = antic_sunday_idx {
+                debug!("Found anticipated Sunday");
+                Some(offices.swap_remove(idx))
             } else {
                 None
             };
-            offices.extend_from_slice(&(sanctoral[day])[..]);
             // if we're translating a feast with an octave, we delete days from its octave as we go
             let offices: Vec<Office<'a>> = offices
                 .into_iter()
@@ -78,17 +78,14 @@ impl<'a> Ordo<'a> {
                     }
                 }
                 // now we re-generate the office for the day with the anticipated Sunday
-                let mut offices = temporal[antic_day].clone();
-                if antic_day != day {
-                    offices.push(antic_sunday);
-                }
-                offices.extend_from_slice(&(sanctoral[antic_day])[..]);
+                let mut offices = days[antic_day].clone();
+                offices.push(antic_sunday);
                 let (lauds, no_translations) = rubrics_system.order_lauds(&offices[..]);
                 assert!(no_translations.is_empty());
                 all_lauds[antic_day] = lauds
             }
         }
-        for day in 0..(temporal.len() - 1) {
+        for day in 0..(days.len() - 1) {
             let vespers = rubrics_system.order_vespers(
                 &all_lauds[day],
                 &all_lauds[day + 1],
@@ -99,10 +96,10 @@ impl<'a> Ordo<'a> {
                 vespers,
             });
         }
-        let dec31 = ch.n_days() - 1;
-        let lauds_next_year = OrderedLauds::of(CIRCUMCISION);
+        let dec31 = ch.ordinal0(12, 31);
+        // lauds of Jan 1 is the same every year
         let vespers_dec31 =
-            rubrics_system.order_vespers(&all_lauds[dec31], &lauds_next_year, ch.is_sunday(dec31));
+            rubrics_system.order_vespers(&all_lauds[dec31], &all_lauds[0], ch.is_sunday(dec31));
         entries.push(OrdoEntry {
             lauds: all_lauds[dec31].clone(),
             vespers: vespers_dec31,

@@ -8,17 +8,17 @@ pub mod temporal_cycle;
 pub struct Calendar1939;
 
 impl Calendar for Calendar1939 {
-    fn temporal_cycle<'a>(&self, year: i32) -> Vec<Vec<Office<'a>>> {
+    fn add_temporal_cycle(&self, year: i32, days: &mut [Vec<Office<'_>>]) {
         let ch = CalendarHelper::new(year);
-        self.temporal_cycle_h(ch)
+        self.add_temporal_cycle_h(ch, days);
     }
-    fn calendar_of_saints<'a>(&self) -> &[CalendarEntry<'a>] {
-        &sanctoral_cycle::CALENDAR_OF_SAINTS[..]
+    fn calendar_of_saints<'a>(&self, year: i32) -> Vec<CalendarEntry<'a>> {
+        let mut calendar = sanctoral_cycle::CALENDAR_OF_SAINTS[..].to_vec();
+        let moveable = self.moveable_feasts(year);
+        calendar.extend_from_slice(&moveable[..]);
+        calendar
     }
     fn sanctoral_cycle<'a>(&self, year: i32) -> Vec<Vec<Office<'a>>> {
-        let ch = CalendarHelper::new(year);
-        let mut days: Vec<Vec<Office<'a>>> = vec![Vec::new(); ch.n_days()];
-        self.add_moveable_feasts(ch, &mut days);
-        self.sanctoral_cycle_h(ch, Rubrics1939, days)
+        self.sanctoral_cycle_h(year, Rubrics1939)
     }
 }

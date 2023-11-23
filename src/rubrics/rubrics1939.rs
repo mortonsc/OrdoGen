@@ -254,7 +254,7 @@ impl Rubrics1939 {
                 ..
             } => 15,
             // the rubrics don't say this explicitly but generally they treats anticipated Sundays
-            // the same as other Sundays it less they explicitly distinguish them
+            // the same as other Sundays unless they explicitly distinguish them
             Office::Feria {
                 rank: FeriaRank::AnticipatedSunday,
                 ..
@@ -305,17 +305,17 @@ impl Rubrics1939 {
             _ => panic!("unexpected commemorated office: {:?}", off),
         }
     }
-    // if d1 and d2 are both feasts or days within octaves, returns which feast has precedence
-    // otherwise returns Ordering::Equal (so it can easily be included in a chain of comparisons
-    // between arbitrary Offices)
+    // if d1 and d2 are both feasts, returns which feast has precedence
+    // this should only be used to compare days of the same rite
+    // as it will give incorrect results if you compare a day within an octave to a feast
+    // because it will compare the feast to the feast the octave is of
+    // if either day is not a feast / day within octave, returns Ordering::Equal
+    // (so it can easily be included in a chain of comparisons between arbitrary Offices)
     fn compare_feast_precedence(&self, off1: Office, off2: Office) -> Ordering {
         if let (Some(fd1), Some(fd2)) = (off1.assoc_feast_details(), off2.assoc_feast_details()) {
             fd1.rank
                 .cmp(&fd2.rank)
-                .then(true_is_greater(
-                    off1.is_of_solemn_feast(),
-                    off2.is_of_solemn_feast(),
-                ))
+                .then(true_is_greater(fd1.is_solemn(), fd2.is_solemn()))
                 .then(fd1.sub_rank.cmp(&fd2.sub_rank))
                 .then(fd1.person.cmp(&fd2.person))
                 .then(true_is_greater(fd1.is_local, fd2.is_local))
@@ -627,7 +627,7 @@ impl RubricsSystem for Rubrics1939 {
         if matches!(
             praec,
             Office::Feast(FeastDetails {
-                id: "in-circumcisione-domini",
+                id: "in-circumcisione-dnjc",
                 ..
             })
         ) {
@@ -696,8 +696,19 @@ impl RubricsSystem for Rubrics1939 {
             _ => true,
         }
     }
-    fn anticipate_vigils(&self) -> bool {
-        true
+    fn anticipate_vigil(&self, rank: VigilRank) -> bool {
+        rank == VigilRank::Common
+    }
+    fn admits_our_lady_on_saturday(&self, off: Office) -> bool {
+        // TODO: confirm that simple octave days don't admit OLOS
+        // the occurrence table has a 0 for that situation, implying they don't
+        matches!(
+            off,
+            Office::Feast(FeastDetails {
+                rank: FeastRank::Commemoration | FeastRank::Simple,
+                ..
+            })
+        )
     }
     fn admits_anticipated_sunday(&self, off: Office) -> bool {
         // Sundays cannot be anticipated to "days of 9 lessons"

@@ -145,6 +145,10 @@ impl<'a> FeastDetails<'a> {
     pub const fn done(self) -> Office<'a> {
         Office::Feast(self)
     }
+    // this technical meaning of "solemn" is relevant to determining feast precedence
+    pub fn is_solemn(self) -> bool {
+        self.is_feriatum || self.octave.is_some()
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Serialize, Deserialize)]
@@ -297,19 +301,6 @@ impl<'a> Office<'a> {
         }
         false
     }
-    // this technical meaning of "solemn" is relevant to determining feast precedence
-    pub fn is_of_solemn_feast(self) -> bool {
-        match self {
-            Self::Feast(feast_details) | Self::OctaveDay { feast_details, .. } => {
-                feast_details.is_feriatum || feast_details.octave.is_some()
-            }
-            // "Ratio tamen majoris solemnitatis per Octavam inductae consideranda tantum est in
-            // die Festo atque in die Octavae, non vero in diebus infra Octavam."
-            // Can't imagine when this would ever matter
-            Self::WithinOctave { feast_details, .. } => feast_details.is_feriatum,
-            _ => false,
-        }
-    }
     pub fn is_feast_of_the_lord(self) -> bool {
         matches!(self.person(), Some(Person::OurLord))
     }
@@ -364,10 +355,16 @@ impl<'a> Office<'a> {
     pub fn octave_day(self) -> Option<Self> {
         let feast_details = self.feast_details()?;
         let rank = feast_details.octave?;
-        Some(Self::OctaveDay {
-            feast_details,
-            rank,
-        })
+        if feast_details.id == "nativitas-dnjc" || rank == OctaveRank::FirstOrder {
+            // the Circumcision has its own entry in the sanctoral cycle
+            // while Easter and Pentecost don't have octave days
+            None
+        } else {
+            Some(Self::OctaveDay {
+                feast_details,
+                rank,
+            })
+        }
     }
     pub fn with_matins_id(self, new_matins_id: &'a str) -> Self {
         if let Self::Sunday { id, rank, .. } = self {
@@ -377,7 +374,7 @@ impl<'a> Office<'a> {
                 rank,
             }
         } else {
-            self
+            panic!("tried to add a matins_id to a non-Sunday office: {}", self);
         }
     }
 }
@@ -540,9 +537,18 @@ pub trait RubricsSystem {
     fn praec_admits_commemoration(&self, praec: Office, seq: Office, seq_is_sunday: bool) -> bool;
     // assuming Vespers is of seq, returns true if praec is to be commemorated
     fn seq_admits_commemoration(&self, praec: Office, seq: Office, seq_is_sunday: bool) -> bool;
-    // returns true if vigils that fall on Sunday should be anticipated
-    // doesn't apply to the vigils of Christmas or Epiphany
-    fn anticipate_vigils(&self) -> bool;
+    // returns true if a vigil of the given rank should be anticipated when it falls on a Sunday
+    fn anticipate_vigil(&self, rank: VigilRank) -> bool;
+    fn admits_common_feria(&self, off: Office) -> bool {
+        matches!(
+            off,
+            Office::Feast(FeastDetails {
+                rank: FeastRank::Commemoration,
+                ..
+            })
+        )
+    }
+    fn admits_our_lady_on_saturday(&self, off: Office) -> bool;
     fn admits_anticipated_sunday(&self, off: Office) -> bool;
     fn order_lauds<'a>(&self, occs: &[Office<'a>]) -> (OrderedLauds<'a>, Vec<Office<'a>>) {
         let mut to_commemorate: Vec<Office<'a>> = Vec::new();

@@ -1,30 +1,109 @@
 use super::*;
 
-const SEPTEM_DOLORUM_BMV_TEMP_PASS: Office =
-    Office::feast("septem-dolorum-bmv-temp-pass", FeastRank::GreaterDouble)
-        .with_person(Person::OurLady)
-        .make_secondary()
-        .done();
-
-const SOLEMNITY_ST_JOSEPH: Office =
-    Office::feast("solemnitas-s-joseph", FeastRank::DoubleFirstClass)
-        .with_person(Person::Joseph)
-        .with_octave(OctaveRank::Common)
-        .make_feriatum()
-        .done();
-
 impl Calendar1939 {
-    pub fn add_moveable_feasts(self, ch: CalendarHelper, days: &mut [Vec<Office<'_>>]) {
-        days[ch.easter - 9].push(SEPTEM_DOLORUM_BMV_TEMP_PASS);
-        days[ch.easter + 17].push(SOLEMNITY_ST_JOSEPH);
+    pub fn moveable_feasts<'a>(self, year: i32) -> Vec<CalendarEntry<'a>> {
+        let mut entries: Vec<CalendarEntry<'a>> = Vec::new();
+        let ch = CalendarHelper::new(year);
+        let (holy_family_m, holy_family_d) = ch.month_day(ch.sunday_after(ch.epiphany()).unwrap());
+
+        let holy_family_d = if holy_family_d == 13 {
+            12
+        } else {
+            holy_family_d
+        };
+        entries.push((
+            holy_family_m,
+            holy_family_d,
+            FeastDetails::new("s-familiae-jmj", FeastRank::GreaterDouble)
+                .with_person(Person::OurLord),
+        ));
+
+        let purification = ch.ordinal0(2, 2);
+        let purification_d = if ch.is_sunday(purification) && purification >= ch.septuagesima() {
+            3
+        } else {
+            2
+        };
+        // TODO: feast of Our Lord and Our Lady
+        entries.push((
+            2,
+            purification_d,
+            FeastDetails::new("in-purificatione-bmv", FeastRank::DoubleSecondClass)
+                .with_person(Person::OurLord)
+                .make_feriatum(),
+        ));
+
+        let annunciation = ch.ordinal0(3, 25);
+        let annunciation = if annunciation >= ch.easter() - 7 {
+            ch.easter() + 8
+        } else if ch.is_sunday(annunciation) {
+            annunciation + 1
+        } else {
+            annunciation
+        };
+        let (annunciation_m, annunciation_d) = ch.month_day(annunciation);
+        entries.push((
+            annunciation_m,
+            annunciation_d,
+            FeastDetails::new("in-annuntiatione-bmv", FeastRank::DoubleFirstClass)
+                .with_person(Person::OurLady)
+                .make_feriatum(),
+        ));
+
+        let (sorrows_m, sorrows_d) = ch.month_day(ch.easter() - 9);
+        entries.push((
+            sorrows_m,
+            sorrows_d,
+            FeastDetails::new("septem-dolorum-bmv-temp-pass", FeastRank::GreaterDouble)
+                .with_person(Person::OurLady)
+                .make_secondary(),
+        ));
+
+        let (joseph_m, joseph_d) = ch.month_day(ch.easter() + 17);
+        entries.push((
+            joseph_m,
+            joseph_d,
+            FeastDetails::new("solemnitas-s-joseph", FeastRank::DoubleFirstClass)
+                .with_person(Person::Joseph)
+                .with_octave(OctaveRank::Common)
+                .make_feriatum(),
+        ));
+
+        let oct31_date = NaiveDate::from_ymd_opt(ch.year, 10, 31).unwrap();
+        let ctk = (oct31_date.ordinal0() + 1 - oct31_date.weekday().number_from_sunday()) as usize;
+        let (ctk_m, ctk_d) = ch.month_day(ctk);
+        entries.push((
+            ctk_m,
+            ctk_d,
+            FeastDetails::new("dnjc-regis", FeastRank::DoubleFirstClass)
+                .with_person(Person::OurLord),
+        ));
+
+        entries
     }
 }
 
-pub const CALENDAR_OF_SAINTS: [CalendarEntry; 307] = [
+pub static CALENDAR_OF_SAINTS: [CalendarEntry; 315] = [
+    (
+        1,
+        1,
+        FeastDetails::new("in-circumcisione-dnjc", FeastRank::DoubleSecondClass)
+            .with_person(Person::OurLord)
+            .make_feriatum(),
+    ),
     (
         1,
         5,
         FeastDetails::new("s-telesphori-pm", FeastRank::Commemoration),
+    ),
+    (
+        1,
+        6,
+        FeastDetails::new("in-epiphania-dnjc", FeastRank::DoubleFirstClass)
+            .with_person(Person::OurLord)
+            .make_feriatum()
+            .with_vigil(VigilRank::SecondClass)
+            .with_octave(OctaveRank::SecondOrder),
     ),
     (
         1,
@@ -1512,5 +1591,42 @@ pub const CALENDAR_OF_SAINTS: [CalendarEntry; 307] = [
             .with_person(Person::Apostle)
             .with_vigil(VigilRank::Common)
             .make_feriatum(),
+    ),
+    (
+        12,
+        25,
+        FeastDetails::new("nativitas-dnjc", FeastRank::DoubleFirstClass)
+            .with_person(Person::OurLord)
+            .with_octave(OctaveRank::ThirdOrder)
+            .with_vigil(VigilRank::FirstClass)
+            .make_feriatum(),
+    ),
+    (
+        12,
+        26,
+        FeastDetails::new("s-stephani-protomartyris", FeastRank::DoubleSecondClass)
+            .with_octave(OctaveRank::Simple)
+            .make_feriatum(),
+    ),
+    (
+        12,
+        27,
+        FeastDetails::new("s-joannis-ap-ev", FeastRank::DoubleSecondClass)
+            .with_person(Person::Apostle)
+            .with_octave(OctaveRank::Simple)
+            .make_feriatum(),
+    ),
+    (
+        12,
+        28,
+        FeastDetails::new("ss-innocentium-mm", FeastRank::DoubleSecondClass)
+            .with_octave(OctaveRank::Simple)
+            .make_feriatum(),
+    ),
+    (12, 29, FeastDetails::new("s-thomas-em", FeastRank::Double)),
+    (
+        12,
+        31,
+        FeastDetails::new("s-silvestri-i-pc", FeastRank::Double),
     ),
 ];
