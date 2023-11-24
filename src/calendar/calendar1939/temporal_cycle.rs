@@ -302,72 +302,40 @@ impl Calendar1939 {
         }
         // Lenten ferias
         let lent1 = ch.easter() - 42;
-        days[lent1 - 4].push(Office::named_feria(
-            "dies-cinerum",
-            FeriaRank::Privileged,
-            true,
-        ));
-        days[lent1 - 3].push(Office::unnamed_feria(FeriaRank::ThirdClass, true));
-        days[lent1 - 2].push(Office::unnamed_feria(FeriaRank::ThirdClass, true));
-        days[lent1 - 1].push(Office::unnamed_feria(FeriaRank::ThirdClass, false));
-        days[lent1 + 1].push(Office::unnamed_feria(FeriaRank::ThirdClass, true));
-        days[lent1 + 2].push(Office::unnamed_feria(FeriaRank::ThirdClass, true));
-        days[lent1 + 3].push(Office::named_feria(
-            "fer-4-qt-quad",
-            FeriaRank::ThirdClass,
-            true,
-        ));
-        days[lent1 + 4].push(Office::unnamed_feria(FeriaRank::ThirdClass, true));
-        days[lent1 + 5].push(Office::named_feria(
-            "fer-6-qt-quad",
-            FeriaRank::ThirdClass,
-            true,
-        ));
-        days[lent1 + 6].push(Office::named_feria(
-            "sab-qt-quad",
-            FeriaRank::ThirdClass,
-            false,
-        ));
+        days[lent1 - 4].push(Office::feria(FeriaRank::Privileged, true).with_id("dies-cinerum"));
+        days[lent1 - 3].push(Office::feria(FeriaRank::ThirdClass, true));
+        days[lent1 - 2].push(Office::feria(FeriaRank::ThirdClass, true));
+        days[lent1 - 1].push(Office::feria(FeriaRank::ThirdClass, false));
+        days[lent1 + 1].push(Office::feria(FeriaRank::ThirdClass, true));
+        days[lent1 + 2].push(Office::feria(FeriaRank::ThirdClass, true));
+        days[lent1 + 3].push(Office::feria(FeriaRank::ThirdClass, true).with_id("fer-4-qt-quad"));
+        days[lent1 + 4].push(Office::feria(FeriaRank::ThirdClass, true));
+        days[lent1 + 5].push(Office::feria(FeriaRank::ThirdClass, true).with_id("fer-6-qt-quad"));
+        days[lent1 + 6].push(Office::feria(FeriaRank::ThirdClass, false).with_id("sab-qt-quad"));
         for week in 1..5 {
             for day in 1..6 {
-                days[lent1 + (7 * week) + day]
-                    .push(Office::unnamed_feria(FeriaRank::ThirdClass, true));
+                days[lent1 + (7 * week) + day].push(Office::feria(FeriaRank::ThirdClass, true));
             }
-            days[lent1 + (7 * week) + 6].push(Office::unnamed_feria(FeriaRank::ThirdClass, false));
+            days[lent1 + (7 * week) + 6].push(Office::feria(FeriaRank::ThirdClass, false));
         }
 
         // Holy week
         let palm_sunday = ch.easter() - 7;
         for day in 1..4 {
-            days[palm_sunday + day].push(Office::unnamed_feria(FeriaRank::Privileged, true));
+            days[palm_sunday + day].push(Office::feria(FeriaRank::Privileged, true));
         }
-        days[palm_sunday + 4].push(Office::named_feria(
-            "in-coena-domini",
-            FeriaRank::DoubleFirstClass,
-            true,
-        ));
-        days[palm_sunday + 5].push(Office::named_feria(
-            "in-parasceve",
-            FeriaRank::DoubleFirstClass,
-            true,
-        ));
-        days[palm_sunday + 6].push(Office::named_feria(
-            "sabbato-sancto",
-            FeriaRank::DoubleFirstClass,
-            false,
-        ));
+        days[palm_sunday + 4]
+            .push(Office::feria(FeriaRank::DoubleFirstClass, true).with_id("in-coena-domini"));
+        days[palm_sunday + 5]
+            .push(Office::feria(FeriaRank::DoubleFirstClass, true).with_id("in-parasceve"));
+        days[palm_sunday + 6]
+            .push(Office::feria(FeriaRank::DoubleFirstClass, false).with_id("sabbato-sancto"));
 
         // Easter week
-        days[ch.easter() + 1].push(Office::named_feria(
-            "fer-2-paschatis",
-            FeriaRank::DoubleFirstClass,
-            true,
-        ));
-        days[ch.easter() + 2].push(Office::named_feria(
-            "fer-3-paschatis",
-            FeriaRank::DoubleFirstClass,
-            true,
-        ));
+        days[ch.easter() + 1]
+            .push(Office::feria(FeriaRank::DoubleFirstClass, true).with_id("fer-2-paschatis"));
+        days[ch.easter() + 2]
+            .push(Office::feria(FeriaRank::DoubleFirstClass, true).with_id("fer-3-paschatis"));
         let inf_oct_pascha = EASTER.day_within_octave().unwrap();
         for day in 3..6 {
             days[ch.easter() + day].push(inf_oct_pascha);
@@ -386,9 +354,8 @@ impl Calendar1939 {
             commemorated_at_vespers: false,
         });
 
-        // Ascension and its octave
+        // The vigil of the ascension will be added automatically
         let ascension = ch.easter() + 39;
-        days[ascension - 1].push(ASCENSION.vigil().unwrap());
         days[ascension].push(ASCENSION);
         days[ascension + 8].push(Office::Feria {
             id: Some("fer-6-post-oct-asc"),
@@ -401,16 +368,10 @@ impl Calendar1939 {
         // the vigil will be filled in automatically later
         let pentecost = ch.easter() + 49;
         let inf_oct_pent = PENTECOST.day_within_octave().unwrap();
-        days[pentecost + 1].push(Office::named_feria(
-            "fer-2-pentecostes",
-            FeriaRank::DoubleFirstClass,
-            true,
-        ));
-        days[pentecost + 2].push(Office::named_feria(
-            "fer-3-pentecostes",
-            FeriaRank::DoubleFirstClass,
-            true,
-        ));
+        days[pentecost + 1]
+            .push(Office::feria(FeriaRank::DoubleFirstClass, true).with_id("fer-2-pentecostes"));
+        days[pentecost + 2]
+            .push(Office::feria(FeriaRank::DoubleFirstClass, true).with_id("fer-3-pentecostes"));
         for day in 3..6 {
             days[pentecost + day].push(inf_oct_pent);
         }
@@ -441,48 +402,35 @@ impl Calendar1939 {
             has_second_vespers: true,
             commemorated_at_vespers: false,
         });
-        days[dom_3_sept + 6].push(Office::named_feria(
-            "sab-qt-sept",
-            FeriaRank::ThirdClass,
-            false,
-        ));
+        days[dom_3_sept + 6]
+            .push(Office::feria(FeriaRank::ThirdClass, false).with_id("sab-qt-sept"));
 
         // Advent cycle
         for week in 0..2 {
             days[ch.advent1() + (week * 7)].push(SUNDAYS_OF_ADVENT[week]);
             for day in 1..6 {
                 days[ch.advent1() + (week * 7) + day]
-                    .push(Office::unnamed_feria(FeriaRank::ThirdClass, true));
+                    .push(Office::feria(FeriaRank::ThirdClass, true));
             }
-            days[ch.advent1() + (week * 7) + 6]
-                .push(Office::unnamed_feria(FeriaRank::ThirdClass, false));
+            days[ch.advent1() + (week * 7) + 6].push(Office::feria(FeriaRank::ThirdClass, false));
         }
         days[ch.advent1() + 14].push(SUNDAYS_OF_ADVENT[2]);
-        days[ch.advent1() + 15].push(Office::unnamed_feria(FeriaRank::ThirdClass, true));
-        days[ch.advent1() + 16].push(Office::unnamed_feria(FeriaRank::ThirdClass, true));
-        days[ch.advent1() + 17].push(Office::named_feria(
-            "fer-4-qt-advent",
-            FeriaRank::ThirdClass,
-            true,
-        ));
-        days[ch.advent1() + 18].push(Office::unnamed_feria(FeriaRank::ThirdClass, true));
-        days[ch.advent1() + 19].push(Office::named_feria(
-            "fer-6-qt-advent",
-            FeriaRank::ThirdClass,
-            true,
-        ));
-        days[ch.advent1() + 20].push(Office::named_feria(
-            "sab-qt-advent",
-            FeriaRank::ThirdClass,
-            false,
-        ));
+        days[ch.advent1() + 15].push(Office::feria(FeriaRank::ThirdClass, true));
+        days[ch.advent1() + 16].push(Office::feria(FeriaRank::ThirdClass, true));
+        days[ch.advent1() + 17]
+            .push(Office::feria(FeriaRank::ThirdClass, true).with_id("fer-4-qt-advent"));
+        days[ch.advent1() + 18].push(Office::feria(FeriaRank::ThirdClass, true));
+        days[ch.advent1() + 19]
+            .push(Office::feria(FeriaRank::ThirdClass, true).with_id("fer-6-qt-advent"));
+        days[ch.advent1() + 20]
+            .push(Office::feria(FeriaRank::ThirdClass, false).with_id("sab-qt-advent"));
         days[ch.advent1() + 21].push(SUNDAYS_OF_ADVENT[3]);
         for day in 1..6 {
             let ord = ch.advent1() + 21 + day;
             if ord >= ch.christmas() - 1 {
                 break;
             }
-            days[ord].push(Office::unnamed_feria(FeriaRank::ThirdClass, true));
+            days[ord].push(Office::feria(FeriaRank::ThirdClass, true));
         }
 
         // Christmas cycle
@@ -582,7 +530,7 @@ impl Calendar1939 {
                     .iter()
                     .all(|&o| Rubrics1939.admits_common_feria(o))
                 {
-                    days[day].push(Office::unnamed_feria(FeriaRank::Common, true));
+                    days[day].push(Office::feria(FeriaRank::Common, true));
                 }
             }
         }

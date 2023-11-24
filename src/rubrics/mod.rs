@@ -110,6 +110,11 @@ impl<'a> FeastDetails<'a> {
             is_feriatum: false,
         }
     }
+    // used by Office.with_id
+    pub const fn with_id(mut self, id: &'a str) -> Self {
+        self.id = id;
+        self
+    }
     pub const fn with_person(mut self, person: Person) -> Self {
         self.person = person;
         self
@@ -316,18 +321,10 @@ impl<'a> Office<'a> {
     pub fn is_feast_of_the_lord(self) -> bool {
         matches!(self.person(), Some(Person::OurLord))
     }
-    pub fn named_feria(id: &'a str, rank: FeriaRank, has_second_vespers: bool) -> Self {
-        Self::Feria {
-            id: Some(id),
-            rank,
-            has_second_vespers,
-            commemorated_at_vespers: has_second_vespers,
-        }
-    }
     pub const fn feast(id: &'a str, rank: FeastRank) -> FeastDetails<'a> {
         FeastDetails::new(id, rank)
     }
-    pub const fn unnamed_feria(rank: FeriaRank, has_second_vespers: bool) -> Self {
+    pub const fn feria(rank: FeriaRank, has_second_vespers: bool) -> Self {
         Self::Feria {
             id: None,
             rank,
@@ -335,12 +332,29 @@ impl<'a> Office<'a> {
             commemorated_at_vespers: has_second_vespers,
         }
     }
-    pub const fn common_feria() -> Self {
-        Self::Feria {
-            id: None,
-            rank: FeriaRank::Common,
-            has_second_vespers: true,
-            commemorated_at_vespers: true,
+    // really only useful for ferias
+    pub const fn with_id(self, id: &'a str) -> Self {
+        match self {
+            Self::Feast(feast_details) => Self::Feast(feast_details.with_id(id)),
+            Self::Feria {
+                has_second_vespers,
+                commemorated_at_vespers,
+                rank,
+                ..
+            } => Self::Feria {
+                id: Some(id),
+                rank,
+                has_second_vespers,
+                commemorated_at_vespers,
+            },
+            Self::Sunday {
+                matins_id, rank, ..
+            } => Self::Sunday {
+                id,
+                matins_id,
+                rank,
+            },
+            _ => self,
         }
     }
     pub fn vigil(self) -> Option<Self> {
