@@ -2,21 +2,23 @@ use super::*;
 
 const CORPUS_CHRISTI: Office = Office::feast("ssmi-corporis-christi", FeastRank::DoubleFirstClass)
     .with_person(Person::OurLord)
-    .make_moveable()
     .make_feriatum()
     .with_octave(OctaveRank::SecondOrder)
     .done();
 
 const THOMAS_AP: Office = Office::feast("s-thomas-ap", FeastRank::DoubleSecondClass)
+    .with_proper_date(12, 21)
     .with_person(Person::Apostle)
     .make_feriatum()
     .done();
 
-const EXALT_CRUCIS: Office =
-    Office::feast("in-exaltatione-s-crucis", FeastRank::GreaterDouble).done();
+const EXALT_CRUCIS: Office = Office::feast("in-exaltatione-s-crucis", FeastRank::GreaterDouble)
+    .with_proper_date(9, 14)
+    .done();
 
 const INVENT_STEPHEN: Office =
     Office::feast("inventio-s-stephani-protomartyris", FeastRank::Semidouble)
+        .with_proper_date(8, 3)
         .make_secondary()
         .done();
 
@@ -39,6 +41,7 @@ const DOM_SEPTUAGESIMA: Office = Office::Sunday {
 };
 
 const ASSUMPTION: Office = Office::feast("in-assumptione-bmv", FeastRank::DoubleFirstClass)
+    .with_proper_date(8, 15)
     .with_person(Person::OurLady)
     .with_octave(OctaveRank::Common)
     .with_vigil(VigilRank::Common)

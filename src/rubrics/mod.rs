@@ -4,6 +4,7 @@ use std::cmp::Ordering;
 
 mod display;
 mod rubrics1939;
+mod rubrics1962;
 
 #[cfg(test)]
 mod tests;
@@ -13,13 +14,17 @@ pub use rubrics1939::Rubrics1939;
 // TODO:
 // * The Purification is a feast both of our Lord and our Lady
 
-// convenience function for comparison chains.
-fn true_is_greater(rhs: bool, lhs: bool) -> Ordering {
-    match (rhs, lhs) {
+// convenience functions for comparison chains.
+fn true_is_greater(lhs: bool, rhs: bool) -> Ordering {
+    match (lhs, rhs) {
         (true, false) => Ordering::Greater,
         (false, true) => Ordering::Less,
         _ => Ordering::Equal,
     }
+}
+
+fn false_is_greater(lhs: bool, rhs: bool) -> Ordering {
+    true_is_greater(lhs, rhs).reverse()
 }
 
 // listed from lowest-to-highest so the ordering is correct
@@ -78,6 +83,8 @@ pub struct FeastDetails<'a> {
     pub id: &'a str,
     pub rank: FeastRank,
     #[serde(default)]
+    pub proper_date: Option<(u32, u32)>,
+    #[serde(default)]
     pub sub_rank: FeastSubRank,
     #[serde(default)]
     pub person: Person,
@@ -85,8 +92,6 @@ pub struct FeastDetails<'a> {
     pub is_patron_or_titular: bool,
     #[serde(default)]
     pub is_local: bool,
-    #[serde(default)]
-    pub is_moveable: bool,
     #[serde(default)]
     pub octave: Option<OctaveRank>,
     #[serde(default)]
@@ -100,11 +105,11 @@ impl<'a> FeastDetails<'a> {
         Self {
             id,
             rank,
+            proper_date: None,
             sub_rank: FeastSubRank::Primary,
             person: Person::Other,
             is_patron_or_titular: false,
             is_local: false,
-            is_moveable: false,
             octave: None,
             vigil: None,
             is_feriatum: false,
@@ -112,6 +117,10 @@ impl<'a> FeastDetails<'a> {
     }
     pub const fn with_person(mut self, person: Person) -> Self {
         self.person = person;
+        self
+    }
+    pub const fn with_proper_date(mut self, month: u32, day: u32) -> Self {
+        self.proper_date = Some((month, day));
         self
     }
     pub const fn make_secondary(mut self) -> Self {
@@ -124,10 +133,6 @@ impl<'a> FeastDetails<'a> {
     }
     pub const fn make_local(mut self) -> Self {
         self.is_local = true;
-        self
-    }
-    pub const fn make_moveable(mut self) -> Self {
-        self.is_moveable = true;
         self
     }
     pub const fn make_feriatum(mut self) -> Self {
@@ -144,6 +149,9 @@ impl<'a> FeastDetails<'a> {
     }
     pub const fn done(self) -> Office<'a> {
         Office::Feast(self)
+    }
+    pub fn is_moveable(self) -> bool {
+        self.proper_date.is_none()
     }
     // this technical meaning of "solemn" is relevant to determining feast precedence
     pub fn is_solemn(self) -> bool {
@@ -532,7 +540,13 @@ pub trait RubricsSystem {
     fn compare_commemoration_order(&self, comm1: Office, comm2: Office) -> Ordering;
     // assuming the office of the day is winner and loser occurs on the same day,
     // returns whether loser should be commemorated at the given hour
-    fn occ_admits_commemoration(&self, winner: Office, loser: Office, hour: Hour) -> bool;
+    fn occ_admits_commemoration(
+        &self,
+        winner: Office,
+        loser: Office,
+        hour: Hour,
+        is_sunday: bool,
+    ) -> bool;
     // assuming Vespers is of praec, returns true if seq is to be commemorated
     fn praec_admits_commemoration(&self, praec: Office, seq: Office, seq_is_sunday: bool) -> bool;
     // assuming Vespers is of seq, returns true if praec is to be commemorated
@@ -574,7 +588,7 @@ pub trait RubricsSystem {
             } else if outcome.loser_is == LoserIs::Commemorated
                 && to_commemorate
                     .iter()
-                    .all(|&c| self.occ_admits_commemoration(c, occ, Hour::Lauds))
+                    .all(|&c| self.occ_admits_commemoration(c, occ, Hour::Lauds, false))
             {
                 to_commemorate.push(occ);
             }
@@ -626,7 +640,7 @@ pub trait RubricsSystem {
             .iter()
             .filter(|&&off| {
                 if co.praec_wins() {
-                    self.occ_admits_commemoration(praec, off, Hour::SecondVespers)
+                    self.occ_admits_commemoration(praec, off, Hour::SecondVespers, false)
                 } else {
                     self.seq_admits_commemoration(off, seq, seq_is_sunday)
                 }
@@ -640,7 +654,7 @@ pub trait RubricsSystem {
                 if co.praec_wins() {
                     self.praec_admits_commemoration(praec, off, seq_is_sunday)
                 } else {
-                    self.occ_admits_commemoration(seq, off, Hour::FirstVespers)
+                    self.occ_admits_commemoration(seq, off, Hour::FirstVespers, seq_is_sunday)
                 }
             })
             .filter(|&&off| {

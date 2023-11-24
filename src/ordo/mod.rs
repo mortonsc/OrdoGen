@@ -1,7 +1,5 @@
 use chrono::{Datelike, NaiveDate};
-use log::debug;
 use serde::{Deserialize, Serialize};
-use std::collections::VecDeque;
 
 use crate::calendar::{Calendar, CalendarHelper};
 use crate::rubrics::*;
@@ -20,17 +18,22 @@ pub struct Ordo<'a> {
     pub entries: Vec<OrdoEntry<'a>>,
 }
 
+fn remove_matching<T>(v: &mut Vec<T>, pred: impl Fn(&T) -> bool) -> Option<T> {
+    let idx = v.iter().position(pred);
+    idx.map(|i| v.swap_remove(i))
+}
+
 impl<'a> Ordo<'a> {
     pub fn new(calendar: impl Calendar, rubrics_system: impl RubricsSystem, year: i32) -> Self {
         let ch = CalendarHelper::new(year);
         let days = calendar.generate(year);
         let mut entries: Vec<OrdoEntry<'a>> = Vec::new();
         let mut all_lauds: Vec<OrderedLauds<'a>> = Vec::new();
-        let mut to_translate: VecDeque<Office<'a>> = VecDeque::new();
+        let mut to_translate: Vec<Office<'a>> = Vec::new();
         for day in 0..days.len() {
             let mut offices = days[day].clone();
             // remove an anticipated Sunday to deal with it later
-            let antic_sunday_idx = offices.iter().position(|o| {
+            let antic_sunday = remove_matching(&mut offices, |o| {
                 matches!(
                     o,
                     Office::Feria {
@@ -39,33 +42,24 @@ impl<'a> Ordo<'a> {
                     }
                 )
             });
-            let antic_sunday = if let Some(idx) = antic_sunday_idx {
-                debug!("Found anticipated Sunday");
-                Some(offices.swap_remove(idx))
-            } else {
-                None
-            };
             // if we're translating a feast with an octave, we delete days from its octave as we go
-            let offices: Vec<Office<'a>> = offices
+            let mut offices: Vec<Office<'a>> = offices
                 .into_iter()
                 .filter(|&o| !to_translate.iter().any(|t| t.is_of_same_feast(o)))
                 .collect();
-            let (lauds, new_to_translate) = rubrics_system.order_lauds(&offices[..]);
-            let lauds = if !to_translate.is_empty()
-                && rubrics_system.admits_translated_feast(lauds.office_of_day)
+            if !to_translate.is_empty()
+                && offices
+                    .iter()
+                    .all(|&o| rubrics_system.admits_translated_feast(o))
             {
-                assert!(new_to_translate.is_empty());
-                let mut new_offs_of_day = offices.clone();
-                new_offs_of_day.push(to_translate.pop_front().unwrap());
-                let (new_lauds, no_translations) = rubrics_system.order_lauds(&new_offs_of_day);
-                assert!(no_translations.is_empty());
-                new_lauds
-            } else {
-                lauds
-            };
-            for t in new_to_translate {
-                to_translate.push_back(t);
+                // if multiple feasts are being translated, the highest ranked gets first dibs on
+                // the first open day
+                // TODO: handle vigils of transferred feasts
+                to_translate.sort_by(|&o1, &o2| rubrics_system.compare_precedence_occ(o1, o2));
+                offices.push(to_translate.pop().unwrap())
             }
+            let (lauds, new_to_translate) = rubrics_system.order_lauds(&offices[..]);
+            to_translate.extend_from_slice(&new_to_translate[..]);
             all_lauds.push(lauds);
             if let Some(antic_sunday) = antic_sunday {
                 let mut antic_day = day;
@@ -80,8 +74,7 @@ impl<'a> Ordo<'a> {
                 // now we re-generate the office for the day with the anticipated Sunday
                 let mut offices = days[antic_day].clone();
                 offices.push(antic_sunday);
-                let (lauds, no_translations) = rubrics_system.order_lauds(&offices[..]);
-                assert!(no_translations.is_empty());
+                let (lauds, _) = rubrics_system.order_lauds(&offices[..]);
                 all_lauds[antic_day] = lauds
             }
         }

@@ -329,8 +329,8 @@ impl Rubrics1939 {
     }
     // returns whether off is of the sort to be commemorated
     // within an occuring office at the given hour
-    fn wants_commemoration(&self, off: Office, hour: Hour) -> bool {
-        if hour == Hour::FirstVespers && !self.has_first_vespers(off, false)
+    fn wants_commemoration(&self, off: Office, hour: Hour, is_sunday: bool) -> bool {
+        if hour == Hour::FirstVespers && !self.has_first_vespers(off, is_sunday)
             || hour == Hour::SecondVespers && !self.has_second_vespers(off)
         {
             return false;
@@ -391,13 +391,12 @@ impl RubricsSystem for Rubrics1939 {
             _ => true,
         }
     }
-    // TODO: not very sure about this
-    // probably has to account for the rank of the translated feast
     fn admits_translated_feast(&self, off: Office) -> bool {
         match off {
             Office::Sunday { .. } => false,
             Office::Feast(FeastDetails { rank, .. }) => rank < FeastRank::DoubleSecondClass,
-            Office::WithinOctave { rank, .. } => rank < OctaveRank::SecondOrder,
+            // TODO: not sure about this
+            Office::WithinOctave { rank, .. } => rank <= OctaveRank::SecondOrder,
             Office::Feria { rank, .. } => rank < FeriaRank::Privileged,
             Office::Vigil { rank, .. } => rank < VigilRank::SecondClass,
             Office::AllSouls => false,
@@ -415,7 +414,8 @@ impl RubricsSystem for Rubrics1939 {
         let (winner, loser) = office_to_celebrate.winner_first(occ1, occ2);
         let loser_is = if self.is_translated(loser) {
             LoserIs::Translated
-        } else if self.occ_admits_commemoration(winner, loser, Hour::Lauds) {
+            //is_sunday doesn't matter here
+        } else if self.occ_admits_commemoration(winner, loser, Hour::Lauds, true) {
             LoserIs::Commemorated
         } else {
             LoserIs::Omitted
@@ -542,8 +542,14 @@ impl RubricsSystem for Rubrics1939 {
             .cmp(&self.commemoration_ordering_key(comm2))
             .reverse()
     }
-    fn occ_admits_commemoration(&self, winner: Office, loser: Office, hour: Hour) -> bool {
-        if !self.wants_commemoration(loser, hour) {
+    fn occ_admits_commemoration(
+        &self,
+        winner: Office,
+        loser: Office,
+        hour: Hour,
+        is_sunday: bool,
+    ) -> bool {
+        if !self.wants_commemoration(loser, hour, is_sunday) {
             return false;
         }
         if loser == Office::OurLadyOnSaturday {
@@ -616,9 +622,9 @@ impl RubricsSystem for Rubrics1939 {
             _ => true,
         }
     }
-    fn praec_admits_commemoration(&self, praec: Office, seq: Office, _seq_is_sunday: bool) -> bool {
+    fn praec_admits_commemoration(&self, praec: Office, seq: Office, seq_is_sunday: bool) -> bool {
         assert!(self.has_second_vespers(praec));
-        if !self.wants_commemoration(seq, Hour::FirstVespers) {
+        if !self.wants_commemoration(seq, Hour::FirstVespers, seq_is_sunday) {
             return false;
         }
         if praec.is_of_same_subject(seq) {
@@ -653,7 +659,8 @@ impl RubricsSystem for Rubrics1939 {
     }
     fn seq_admits_commemoration(&self, praec: Office, seq: Office, seq_is_sunday: bool) -> bool {
         assert!(self.has_first_vespers(seq, seq_is_sunday));
-        if !self.wants_commemoration(praec, Hour::SecondVespers) {
+        // is_sunday doesn't matter here
+        if !self.wants_commemoration(praec, Hour::SecondVespers, false) {
             return false;
         }
         if praec.is_of_same_subject(seq) {

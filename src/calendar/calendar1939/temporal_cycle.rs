@@ -1,6 +1,6 @@
 use super::*;
 
-pub const SUNDAYS_OF_ADVENT: [Office; 4] = [
+static SUNDAYS_OF_ADVENT: [Office; 4] = [
     Office::Sunday {
         id: "dom-1-advent",
         matins_id: None,
@@ -34,7 +34,7 @@ const HOLY_NAME: Office = Office::feast("ss-nominis-jesu", FeastRank::DoubleSeco
     .make_secondary()
     .done();
 
-const SUNDAYS_AFTER_EPIPHANY: [Office; 6] = [
+static SUNDAYS_AFTER_EPIPHANY: [Office; 6] = [
     Office::Sunday {
         id: "dom-inf-oct-epiph",
         matins_id: None,
@@ -71,7 +71,6 @@ const EASTER: Office = Office::feast("dom-resurrectionis", FeastRank::DoubleFirs
     .with_person(Person::OurLord)
     .make_feriatum()
     .with_octave(OctaveRank::FirstOrder)
-    .make_moveable()
     .done();
 
 const ASCENSION: Office = Office::feast("in-ascensione-dnjc", FeastRank::DoubleFirstClass)
@@ -79,7 +78,6 @@ const ASCENSION: Office = Office::feast("in-ascensione-dnjc", FeastRank::DoubleF
     .make_feriatum()
     .with_vigil(VigilRank::Common)
     .with_octave(OctaveRank::ThirdOrder)
-    .make_moveable()
     .done();
 
 const PENTECOST: Office = Office::feast("dom-pentecostes", FeastRank::DoubleFirstClass)
@@ -87,30 +85,26 @@ const PENTECOST: Office = Office::feast("dom-pentecostes", FeastRank::DoubleFirs
     .make_feriatum()
     .with_vigil(VigilRank::FirstClass)
     .with_octave(OctaveRank::FirstOrder)
-    .make_moveable()
     .done();
 
 const TRINITY_SUNDAY: Office = Office::feast("dom-ss-trinitatis", FeastRank::DoubleFirstClass)
     .with_person(Person::Trinity)
     .make_feriatum()
-    .make_moveable()
     .done();
 
 const CORPUS_CHRISTI: Office = Office::feast("ss-corporis-christi", FeastRank::DoubleFirstClass)
     .with_person(Person::OurLord)
     .make_feriatum()
     .with_octave(OctaveRank::SecondOrder)
-    .make_moveable()
     .done();
 
 const SACRED_HEART: Office = Office::feast("ss-cordis-jesu", FeastRank::DoubleFirstClass)
     .with_person(Person::OurLady)
     .with_octave(OctaveRank::ThirdOrder)
-    .make_moveable()
     .done();
 
 const N_EASTER_CYCLE_SUNDAYS: usize = 39;
-const EASTER_CYCLE_SUNDAYS: [Office; N_EASTER_CYCLE_SUNDAYS] = [
+static EASTER_CYCLE_SUNDAYS: [Office; N_EASTER_CYCLE_SUNDAYS] = [
     Office::Sunday {
         id: "dom-in-septuagesima",
         matins_id: None,

@@ -29,6 +29,7 @@ impl Calendar1939 {
             2,
             purification_d,
             FeastDetails::new("in-purificatione-bmv", FeastRank::DoubleSecondClass)
+                .with_proper_date(2, 2)
                 .with_person(Person::OurLord)
                 .make_feriatum(),
         ));
@@ -46,6 +47,7 @@ impl Calendar1939 {
             annunciation_m,
             annunciation_d,
             FeastDetails::new("in-annuntiatione-bmv", FeastRank::DoubleFirstClass)
+                .with_proper_date(3, 25)
                 .with_person(Person::OurLady)
                 .make_feriatum(),
         ));

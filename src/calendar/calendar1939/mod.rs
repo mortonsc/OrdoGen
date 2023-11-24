@@ -13,7 +13,12 @@ impl Calendar for Calendar1939 {
         self.add_temporal_cycle_h(ch, days);
     }
     fn calendar_of_saints<'a>(&self, year: i32) -> Vec<CalendarEntry<'a>> {
-        let mut calendar = sanctoral_cycle::CALENDAR_OF_SAINTS[..].to_vec();
+        let mut calendar: Vec<CalendarEntry<'a>> = sanctoral_cycle::CALENDAR_OF_SAINTS
+            .iter()
+            .map(|&(month, day, feast_details)| {
+                (month, day, feast_details.with_proper_date(month, day))
+            })
+            .collect();
         let moveable = self.moveable_feasts(year);
         calendar.extend_from_slice(&moveable[..]);
         calendar
