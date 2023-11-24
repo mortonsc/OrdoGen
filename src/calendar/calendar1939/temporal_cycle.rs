@@ -294,11 +294,40 @@ static EASTER_CYCLE_SUNDAYS: [Office; N_EASTER_CYCLE_SUNDAYS] = [
     },
 ];
 
+fn add_matins_id(ch: CalendarHelper, sunday: Office, ord: usize) -> Office {
+    let matins_id = match ch.month_day(ord) {
+        (7, 29..=31) | (8, 1..=4) => "dom-1-aug",
+        (8, 5..=11) => "dom-2-aug",
+        (8, 12..=18) => "dom-3-aug",
+        (8, 19..=25) => "dom-4-aug",
+        (8, 26..=28) => "dom-5-aug",
+        (8, 29..=31) | (9, 1..=4) => "dom-1-sept",
+        (9, 5..=11) => "dom-2-sept",
+        (9, 12..=18) => "dom-3-sept",
+        (9, 19..=25) => "dom-4-sept",
+        (9, 26..=27) => "dom-5-sept",
+        (9, 28..=30) | (10, 1..=4) => "dom-1-oct",
+        (10, 5..=11) => "dom-2-oct",
+        (10, 12..=18) => "dom-3-oct",
+        (10, 19..=25) => "dom-4-oct",
+        (10, 26..=28) => "dom-5-oct",
+        // November is different because in years when it only has 4 weeks, the 2nd week is omitted
+        (10, 29..=31) | (11, 1..=4) => "dom-1-nov",
+        (11, 5) => "dom-2-nov",
+        (11, 6..=12) => "dom-3-nov",
+        (11, 13..=19) => "dom-4-nov",
+        (11, 20..=26) => "dom-5-nov",
+        _ => return sunday,
+    };
+    sunday.with_matins_id(matins_id)
+}
+
 impl Calendar1939 {
     pub fn add_temporal_cycle_h(&self, ch: CalendarHelper, days: &mut [Vec<Office<'_>>]) {
         // Easter cycle
         for week in 0..N_EASTER_CYCLE_SUNDAYS {
-            days[ch.septuagesima() + (7 * week)].push(EASTER_CYCLE_SUNDAYS[week])
+            let ord = ch.septuagesima() + (7 * week);
+            days[ord].push(add_matins_id(ch, EASTER_CYCLE_SUNDAYS[week], ord));
         }
         // Lenten ferias
         let lent1 = ch.easter() - 42;
@@ -469,25 +498,22 @@ impl Calendar1939 {
 
         // End of the Pentecost cycle
         let post_pent_24 = ch.advent1() - 7;
-        days[post_pent_24].push(Office::Sunday {
-            id: "dom-24-post-pent",
-            matins_id: None,
-            rank: SundayRank::Common,
-        });
-        let post_pent_23 = pentecost + 23 * 7;
+        days[post_pent_24].push(add_matins_id(
+            ch,
+            Office::sunday("dom-24-post-pent", SundayRank::Common),
+            post_pent_24,
+        ));
+        let post_pent_23 = pentecost + (23 * 7);
         if post_pent_23 == post_pent_24 {
-            days[post_pent_24 - 1].push(Office::Feria {
-                id: Some("dom-23-post-pent"),
-                rank: FeriaRank::AnticipatedSunday,
-                has_second_vespers: false,
-                commemorated_at_vespers: false,
-            });
+            days[post_pent_24 - 1].push(
+                Office::feria(FeriaRank::AnticipatedSunday, false).with_id("dom-23-post-pent"),
+            );
         } else {
-            days[post_pent_23].push(Office::Sunday {
-                id: "dom-23-post-pent",
-                matins_id: None,
-                rank: SundayRank::Common,
-            });
+            days[post_pent_23].push(add_matins_id(
+                ch,
+                Office::sunday("dom-23-post-pent", SundayRank::Common),
+                post_pent_23,
+            ));
         }
 
         let mut first_resumed_sunday_post_epiph = 7;
@@ -506,12 +532,8 @@ impl Calendar1939 {
             let Office::Sunday { id, .. } = SUNDAYS_AFTER_EPIPHANY[missing_sunday - 1] else {
                 panic!()
             };
-            days[ch.septuagesima() - 1].push(Office::Feria {
-                id: Some(id),
-                rank: FeriaRank::AnticipatedSunday,
-                has_second_vespers: false,
-                commemorated_at_vespers: false,
-            });
+            days[ch.septuagesima() - 1]
+                .push(Office::feria(FeriaRank::AnticipatedSunday, false).with_id(id));
         } else {
             assert!(n_missing_sundays == 0);
         }

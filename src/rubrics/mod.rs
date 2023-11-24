@@ -257,6 +257,14 @@ impl<'a> Office<'a> {
     pub fn is_empty(self) -> bool {
         matches!(self, Self::Empty)
     }
+    pub fn id(self) -> Option<&'a str> {
+        match self {
+            Self::Sunday { id, .. }
+            | Self::Feast(FeastDetails { id, .. })
+            | Self::Feria { id: Some(id), .. } => Some(id),
+            _ => None,
+        }
+    }
     pub fn feast_details(self) -> Option<FeastDetails<'a>> {
         if let Self::Feast(fd) = self {
             Some(fd)
@@ -323,6 +331,13 @@ impl<'a> Office<'a> {
     }
     pub const fn feast(id: &'a str, rank: FeastRank) -> FeastDetails<'a> {
         FeastDetails::new(id, rank)
+    }
+    pub const fn sunday(id: &'a str, rank: SundayRank) -> Self {
+        Self::Sunday {
+            id,
+            matins_id: None,
+            rank,
+        }
     }
     pub const fn feria(rank: FeriaRank, has_second_vespers: bool) -> Self {
         Self::Feria {

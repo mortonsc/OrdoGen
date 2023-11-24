@@ -71,8 +71,7 @@ impl Calendar1939 {
                 .make_feriatum(),
         ));
 
-        let oct31_date = NaiveDate::from_ymd_opt(ch.year, 10, 31).unwrap();
-        let ctk = (oct31_date.ordinal0() + 1 - oct31_date.weekday().number_from_sunday()) as usize;
+        let ctk = ch.sunday_after(ch.ordinal0(10, 24)).unwrap();
         let (ctk_m, ctk_d) = ch.month_day(ctk);
         entries.push((
             ctk_m,
