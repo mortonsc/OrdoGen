@@ -390,11 +390,6 @@ impl Calendar1939 {
         let ascension = ch.easter() + 39;
         days[ascension - 1].push(ASCENSION.vigil().unwrap());
         days[ascension].push(ASCENSION);
-        let inf_oct_asc = ASCENSION.day_within_octave().unwrap();
-        for day in 1..7 {
-            days[ascension + day].push(inf_oct_asc);
-        }
-        days[ascension + 7].push(ASCENSION.octave_day().unwrap());
         days[ascension + 8].push(Office::Feria {
             id: Some("fer-6-post-oct-asc"),
             rank: FeriaRank::FridayAfterOctAsc,
@@ -426,23 +421,11 @@ impl Calendar1939 {
         });
         days[pentecost + 7].push(TRINITY_SUNDAY);
 
-        // Corpus Christi and its octave
         let corpus_christi = pentecost + 11;
         days[corpus_christi].push(CORPUS_CHRISTI);
-        let inf_oct_cc = CORPUS_CHRISTI.day_within_octave().unwrap();
-        for day in 1..7 {
-            days[corpus_christi + day].push(inf_oct_cc);
-        }
-        days[corpus_christi + 7].push(CORPUS_CHRISTI.octave_day().unwrap());
 
-        // Sacred heart and its octave
         let sacred_heart = corpus_christi + 8;
         days[sacred_heart].push(SACRED_HEART);
-        let inf_oct_sacred_heart = SACRED_HEART.day_within_octave().unwrap();
-        for day in 1..7 {
-            days[sacred_heart + day].push(inf_oct_sacred_heart);
-        }
-        days[sacred_heart + 7].push(SACRED_HEART.octave_day().unwrap());
 
         // fall ember days
         let dom_3_sept = ch.sunday_after(ch.ordinal0(9, 14)).unwrap();

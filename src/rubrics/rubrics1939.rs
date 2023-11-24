@@ -675,6 +675,8 @@ impl RubricsSystem for Rubrics1939 {
                 rank: FeastRank::DoubleFirstClass,
                 ..
             }) => match praec {
+                // TODO: 1V of the Sacred Heart shouldn't admit a commemoration of the octave day
+                // of Corpus Christi
                 Office::Sunday { .. } => true,
                 Office::Feria { rank, .. } => rank >= FeriaRank::ThirdClassAdvent,
                 Office::Feast(FeastDetails { rank, .. }) => rank >= FeastRank::DoubleSecondClass,

@@ -8,6 +8,7 @@ pub mod calendar;
 pub mod ordo;
 pub mod rubrics;
 
+#[allow(dead_code)]
 fn print_temporal_cycle(year: i32) {
     let ch = CalendarHelper::new(year);
     let mut days: Vec<Vec<Office<'_>>> = vec![Vec::new(); ch.n_days()];
@@ -23,6 +24,7 @@ fn print_temporal_cycle(year: i32) {
     }
 }
 
+#[allow(dead_code)]
 fn print_sanctoral_cycle(year: i32) {
     let calendar = calendar::calendar1939::Calendar1939.sanctoral_cycle(year);
     for (day, entry) in calendar.iter().enumerate() {
