@@ -1,6 +1,7 @@
 use chrono::{Datelike, NaiveDate};
 use log::error;
 use serde::{Deserialize, Serialize};
+use std::iter::zip;
 
 use crate::calendar::{Calendar, CalendarHelper};
 use crate::rubrics::*;
@@ -23,10 +24,10 @@ impl<'a> Ordo<'a> {
     pub fn new(calendar: impl Calendar, rubrics_system: impl RubricsSystem, year: i32) -> Self {
         let ch = CalendarHelper::new(year);
         let days = calendar.generate(year);
-        let mut entries: Vec<OrdoEntry<'a>> = Vec::new();
         let mut all_lauds: Vec<OrderedLauds<'a>> = Vec::new();
-        for (day, offices) in days.iter().enumerate() {
-            let (lauds, to_translate) = rubrics_system.order_lauds(&offices[..]);
+        let mut all_vespers: Vec<OrderedVespers<'a>> = Vec::new();
+        for (day, offs) in days.iter().enumerate() {
+            let (lauds, to_translate) = rubrics_system.order_lauds(&offs[..]);
             // feast translation was handled earlier as part of generating the calendar
             if !to_translate.is_empty() {
                 let fd = to_translate[0].feast_details().unwrap();
@@ -41,26 +42,26 @@ impl<'a> Ordo<'a> {
                 &all_lauds[day + 1],
                 ch.is_sunday(day + 1),
             );
-            entries.push(OrdoEntry {
-                lauds: all_lauds[day].clone(),
-                vespers,
-            });
+            all_vespers.push(vespers);
         }
         let dec31 = ch.ordinal0(12, 31);
-        // lauds of Jan 1 is the same every year
-        let vespers_dec31 =
-            rubrics_system.order_vespers(&all_lauds[dec31], &all_lauds[0], ch.is_sunday(dec31 - 6));
-        entries.push(OrdoEntry {
-            lauds: all_lauds[dec31].clone(),
-            vespers: vespers_dec31,
-        });
+        // OrderedLauds of Jan 1 is the same every year
+        all_vespers.push(rubrics_system.order_vespers(
+            &all_lauds[dec31],
+            &all_lauds[0],
+            ch.is_sunday(dec31 - 6),
+        ));
+
+        let entries: Vec<OrdoEntry<'a>> = zip(all_lauds, all_vespers)
+            .map(|(lauds, vespers)| OrdoEntry { lauds, vespers })
+            .collect();
 
         Self { year, entries }
     }
     pub fn for_day(&self, month: u32, day: u32) -> &OrdoEntry<'a> {
-        let idx = NaiveDate::from_ymd_opt(self.year, month, day)
-            .expect("invalid date")
-            .ordinal0() as usize;
-        &self.entries[idx]
+        let Some(date) = NaiveDate::from_ymd_opt(self.year, month, day) else {
+            panic!("invalid date: {}-{}-{}", self.year, month, day);
+        };
+        &self.entries[date.ordinal0() as usize]
     }
 }

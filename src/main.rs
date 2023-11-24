@@ -38,6 +38,7 @@ fn print_sanctoral_cycle(year: i32) {
     }
 }
 
+#[allow(dead_code)]
 fn print_ordo(year: i32) {
     let ordo = Ordo::new(calendar::calendar1939::Calendar1939, Rubrics1939, year);
     for day in 0..ordo.entries.len() {

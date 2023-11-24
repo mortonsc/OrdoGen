@@ -43,6 +43,19 @@ impl CalendarHelper {
         };
         date.ordinal0() as usize
     }
+    // same as ordinal0 except it accounts for the fact that feasts falling between Feb 24 and 28
+    // are transferred forward a day in leap years
+    pub fn ordinal0_of_feast_date(self, month: u32, day: u32) -> usize {
+        if (month, day) == (2, 29) {
+            panic!("2/29 is not a valid date for a feast");
+        }
+        let day = if month == 2 && day >= 24 && is_leap_year(self.year) {
+            day + 1
+        } else {
+            day
+        };
+        self.ordinal0(month, day) as usize
+    }
     pub fn month_day(self, ord: usize) -> (u32, u32) {
         let date = NaiveDate::from_yo_opt(self.year, (ord + 1) as u32).unwrap();
         (date.month(), date.day())
@@ -96,24 +109,30 @@ impl CalendarHelper {
 
 pub type CalendarEntry<'a> = (u32, u32, FeastDetails<'a>);
 
-fn remove_matching<T>(v: &mut Vec<T>, pred: impl Fn(&T) -> bool) -> Option<T> {
-    let idx = v.iter().position(pred);
-    idx.map(|i| v.swap_remove(i))
-}
-
 pub trait Calendar {
+    fn generate<'a>(&self, year: i32) -> Vec<Vec<Office<'a>>>;
     fn add_temporal_cycle(&self, year: i32, days: &mut [Vec<Office<'_>>]);
     fn calendar_of_saints<'a>(&self, year: i32) -> Vec<CalendarEntry<'a>>;
-    fn sanctoral_cycle<'a>(&self, year: i32) -> Vec<Vec<Office<'a>>>;
-    fn generate<'a>(&self, year: i32) -> Vec<Vec<Office<'a>>> {
-        let mut days = self.sanctoral_cycle(year);
-        self.add_temporal_cycle(year, &mut days);
-        // First do the octaves of feasts of our Lord, which are never transferred
-        self.add_octaves(year, &mut days, |rank| {
-            rank == OctaveRank::SecondOrder || rank == OctaveRank::ThirdOrder
-        });
-        self.translate_feasts(&mut days);
-        self.add_octaves(year, &mut days, |rank| rank <= OctaveRank::Common);
+    // generates a vec of vec of offices for each day from self.calendar_of_saints,
+    // and adds in All Souls Day
+    fn sanctoral_cycle<'a>(&self, year: i32) -> Vec<Vec<Office<'a>>> {
+        let ch = CalendarHelper::new(year);
+        let calendar = self.calendar_of_saints(year);
+        let mut days: Vec<Vec<Office<'a>>> = vec![Vec::new(); ch.n_days()];
+        for (month, day, feast_details) in calendar {
+            let ord = ch.ordinal0_of_feast_date(month, day);
+            let off = Office::Feast(feast_details);
+            days[ord].push(off);
+        }
+
+        let all_souls = ch.ordinal0(11, 2);
+        let all_souls = if ch.is_sunday(all_souls) {
+            all_souls + 1
+        } else {
+            all_souls
+        };
+        days[all_souls].push(Office::AllSouls);
+
         days
     }
     fn translate_feasts(&self, days: &mut [Vec<Office>]);
@@ -129,7 +148,7 @@ pub trait Calendar {
                 // the first open day
                 to_translate.sort_by(|&o1, &o2| rubrics_system.compare_precedence_occ(o1, o2));
                 days[day].push(to_translate.pop().unwrap());
-            } else {
+            } else if !new_to_translate.is_empty() {
                 days[day] = days[day]
                     .clone()
                     .into_iter()
@@ -139,6 +158,8 @@ pub trait Calendar {
             }
         }
     }
+    // Adds the vigils of a rank for which include(rank) is true
+    fn add_vigils(&self, year: i32, days: &mut [Vec<Office>], include: impl Fn(VigilRank) -> bool);
     // Adds the octaves for feasts with an octave rank where include(rank) is true
     fn add_octaves(
         &self,
@@ -168,7 +189,7 @@ pub trait Calendar {
                     continue;
                 }
                 let octave_day_ord = if let Some((d, m)) = proper_date {
-                    ch.ordinal0(d, m) + 7
+                    ch.ordinal0_of_feast_date(d, m) + 7
                 } else {
                     day + 7
                 };
@@ -203,18 +224,12 @@ pub trait Calendar {
         rubrics_system: impl RubricsSystem,
         days: &mut [Vec<Office>],
     ) {
-        for day in 0..days.len() {
-            let Some(antic_sunday) = remove_matching(&mut days[day], |o| {
-                matches!(
-                    o,
-                    Office::Feria {
-                        rank: FeriaRank::AnticipatedSunday,
-                        ..
-                    }
-                )
-            }) else {
+        // rough bounds on where an anticipated Sunday can occur
+        for day in 10..335 {
+            let Some(idx) = days[day].iter().position(|o| o.is_anticipated_sunday()) else {
                 continue;
             };
+            let antic_sunday = days[day].swap_remove(idx);
             let mut new_day = day;
             for offset in 0..6 {
                 // this subtraction is always safe as anticipated Sundays can't occur within the
@@ -229,43 +244,5 @@ pub trait Calendar {
             }
             days[new_day].push(antic_sunday);
         }
-    }
-    // generates a vec of vec of offices for each day from self.calendar_of_saints,
-    // filling in vigils (but not octaves), as well as All Souls day
-    fn sanctoral_cycle_h<'a>(&self, year: i32, rs: impl RubricsSystem) -> Vec<Vec<Office<'a>>> {
-        let ch = CalendarHelper::new(year);
-        let calendar = self.calendar_of_saints(year);
-        let mut days: Vec<Vec<Office<'a>>> = vec![Vec::new(); ch.n_days()];
-        for (month, day, feast_details) in calendar {
-            let day = if month == 2 && day >= 24 && is_leap_year(ch.year) {
-                day + 1
-            } else {
-                day
-            };
-            let ord = ch.ordinal0(month, day);
-            let off = Office::Feast(feast_details);
-            days[ord].push(off);
-            if let Some(Office::Vigil { rank, .. }) = off.vigil() {
-                // no vigils in the first couple days of the year, so we can subtract without
-                // modding
-                assert!(ord >= 2);
-                let vigil_ord = if ch.is_sunday(ord - 1) && rs.anticipate_vigil(rank) {
-                    ord - 2
-                } else {
-                    ord - 1
-                };
-                days[vigil_ord].push(off.vigil().unwrap())
-            }
-        }
-
-        let all_souls = ch.ordinal0(11, 2);
-        let all_souls = if ch.is_sunday(all_souls) {
-            all_souls + 1
-        } else {
-            all_souls
-        };
-        days[all_souls].push(Office::AllSouls);
-
-        days
     }
 }

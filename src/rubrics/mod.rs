@@ -235,10 +235,19 @@ impl<'a> Office<'a> {
     }
     pub fn is_greater_feria(self) -> bool {
         if let Self::Feria { rank, .. } = self {
-            rank > FeriaRank::Common
+            rank >= FeriaRank::ThirdClassAdvent
         } else {
             false
         }
+    }
+    pub fn is_anticipated_sunday(self) -> bool {
+        matches!(
+            self,
+            Office::Feria {
+                rank: FeriaRank::AnticipatedSunday,
+                ..
+            }
+        )
     }
     pub fn is_empty(self) -> bool {
         matches!(self, Self::Empty)

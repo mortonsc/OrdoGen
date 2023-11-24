@@ -398,8 +398,8 @@ impl Calendar1939 {
         });
 
         // Pentecost and its octave
+        // the vigil will be filled in automatically later
         let pentecost = ch.easter() + 49;
-        days[pentecost - 1].push(PENTECOST.vigil().unwrap());
         let inf_oct_pent = PENTECOST.day_within_octave().unwrap();
         days[pentecost + 1].push(Office::named_feria(
             "fer-2-pentecostes",
