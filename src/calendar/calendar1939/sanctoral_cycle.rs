@@ -246,7 +246,7 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 315] = [
     (
         2,
         9,
-        FeastDetails::new("s-apolloniae-vm", FeastRank::Double),
+        FeastDetails::new("s-apolloniae-vm", FeastRank::Commemoration),
     ),
     (
         2,

@@ -642,6 +642,15 @@ impl RubricsSystem for Rubrics1939 {
         ) {
             return false;
         }
+        if matches!(
+            praec,
+            Office::Feria {
+                rank: FeriaRank::DoubleFirstClass,
+                ..
+            }
+        ) {
+            return false;
+        }
         // TODO: 1st class feasts of the Lord admit fewer commemorations (?)
         if matches!(
             praec,

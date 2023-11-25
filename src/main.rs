@@ -52,7 +52,7 @@ fn print_ordo(year: i32) {
 
 fn main() {
     env_logger::init();
-    print_ordo(2022);
+    print_ordo(2023);
     // let ordo = Ordo::new(calendar::calendar1939::Calendar1939, Rubrics1939, 2023);
     // println!(
     //     "{}",

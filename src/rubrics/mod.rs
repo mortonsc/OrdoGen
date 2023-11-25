@@ -1,4 +1,5 @@
 use itertools::chain;
+use log::warn;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 
@@ -253,6 +254,12 @@ impl<'a> Office<'a> {
                 ..
             }
         )
+    }
+    pub fn is_day_within_octave(self) -> bool {
+        matches!(self, Self::WithinOctave { .. })
+    }
+    pub fn is_octave_day(self) -> bool {
+        matches!(self, Self::OctaveDay { .. })
     }
     pub fn is_empty(self) -> bool {
         matches!(self, Self::Empty)
@@ -623,6 +630,14 @@ pub trait RubricsSystem {
         let mut occs = occs.to_vec();
         occs.sort_by(|&occ1, &occ2| self.compare_precedence_occ(occ1, occ2));
         let office_of_day: Office = occs.pop().unwrap();
+        if !occs.is_empty()
+            && self.compare_precedence_occ(office_of_day, occs[0]) == Ordering::Equal
+        {
+            warn!(
+                "Two equally ranked offices occuring on the same day: {}, {}",
+                office_of_day, occs[0]
+            );
+        }
         // reverse because we want to deal with higher-ranked things first
         for &occ in occs.iter().rev() {
             let outcome = self.occurrence_outcome(office_of_day, occ);
@@ -702,16 +717,9 @@ pub trait RubricsSystem {
                 }
             })
             .filter(|&&off| {
-                // (pre-55) when two consecutive days within octaves are commemorated,
-                // the commemoration at Vespers is 2V of the first day
-                // in 1962 days in octaves don't have 1V so this does nothing
-                if let Office::WithinOctave { .. } = off {
-                    !comms_from_praec
-                        .iter()
-                        .any(|c| c.office().is_of_same_feast(off))
-                } else {
-                    true
-                }
+                // (pre 55) 1st vespers of a day within an octave is only commemorated when its the
+                // office of the following day, not when it's just commemorated
+                !off.is_day_within_octave()
             })
             .map(|&off| VespersComm::FirstVespers(off))
             .collect();
