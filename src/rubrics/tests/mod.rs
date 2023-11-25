@@ -69,7 +69,7 @@ const OUR_LADY_ON_SATURDAY: Office = Office::OurLadyOnSaturday;
 #[test]
 fn cmp_person() {
     assert!(Person::OurLady < Person::OurLord);
-    assert!(Person::JohnBaptist > Person::Joseph);
+    assert!(Person::StJohnBaptist > Person::StJoseph);
     assert!(Person::Other < Person::Trinity);
 }
 

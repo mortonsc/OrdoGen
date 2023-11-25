@@ -66,7 +66,7 @@ impl Calendar1939 {
             joseph_m,
             joseph_d,
             FeastDetails::new("solemnitas-s-joseph", FeastRank::DoubleFirstClass)
-                .with_person(Person::Joseph)
+                .with_person(Person::StJoseph)
                 .with_octave(OctaveRank::Common)
                 .make_feriatum(),
         ));
@@ -349,7 +349,7 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 315] = [
         3,
         19,
         FeastDetails::new("s-joseph-sponsi-bmv-c", FeastRank::DoubleFirstClass)
-            .with_person(Person::Joseph)
+            .with_person(Person::StJoseph)
             .make_feriatum(),
     ),
     (
@@ -486,7 +486,7 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 315] = [
         5,
         8,
         FeastDetails::new("apparitio-s-michaelis-archangeli", FeastRank::GreaterDouble)
-            .with_person(Person::Angels)
+            .with_person(Person::Angel)
             .make_secondary(),
     ),
     (
@@ -671,7 +671,7 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 315] = [
         6,
         24,
         FeastDetails::new("nativitas-s-joannis-baptistae", FeastRank::DoubleFirstClass)
-            .with_person(Person::JohnBaptist)
+            .with_person(Person::StJohnBaptist)
             .with_vigil(VigilRank::Common)
             .with_octave(OctaveRank::Common)
             .make_feriatum(),
@@ -1053,7 +1053,7 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 315] = [
         8,
         29,
         FeastDetails::new("decollatio-s-joannis-baptistae", FeastRank::GreaterDouble)
-            .with_person(Person::JohnBaptist),
+            .with_person(Person::StJohnBaptist),
     ),
     (
         8,
@@ -1219,7 +1219,7 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 315] = [
             "dedicatio-s-michaelis-archangeli",
             FeastRank::DoubleFirstClass,
         )
-        .with_person(Person::Angels)
+        .with_person(Person::Angel)
         .make_feriatum(),
     ),
     (
@@ -1232,7 +1232,7 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 315] = [
         10,
         2,
         FeastDetails::new("ss-angelorum-custodum", FeastRank::GreaterDouble)
-            .with_person(Person::Angels),
+            .with_person(Person::Angel),
     ),
     (
         10,
@@ -1345,7 +1345,7 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 315] = [
         10,
         24,
         FeastDetails::new("s-raphaelis-archangeli", FeastRank::GreaterDouble)
-            .with_person(Person::Angels),
+            .with_person(Person::Angel),
     ),
     (
         10,

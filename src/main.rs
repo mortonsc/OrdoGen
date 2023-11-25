@@ -46,6 +46,7 @@ fn print_ordo(year: i32) {
         let entry = &ordo.entries[day];
         println!("{} | Ad Laudes:   {}", date.format("%m/%d"), entry.lauds);
         println!("      | Ad Vesperas: {}", entry.vespers);
+        println!("");
     }
 }
 

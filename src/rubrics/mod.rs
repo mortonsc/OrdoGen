@@ -57,9 +57,9 @@ pub enum Person {
     Doctor,
     Evangelist,
     Apostle,
-    Joseph,
-    JohnBaptist,
-    Angels,
+    StJoseph,
+    StJohnBaptist,
+    Angel,
     OurLady,
     OurLord,
     Trinity,
@@ -300,29 +300,40 @@ impl<'a> Office<'a> {
             false
         }
     }
-    // TODO: this doesn't fully deal with separate feasts of the same person
+    // this doesn't fully deal with separate feasts of the same person
     // if the person doesn't have an explicit Person variant
     pub fn is_of_same_subject(self, other: Self) -> bool {
+        self.is_of_same_subject_h(other) || other.is_of_same_subject_h(self)
+    }
+    fn is_of_same_subject_h(self, other: Self) -> bool {
         // two days in the octave of the same feast are obviously of the same person
         // (and we can't always tell this by just looking at the Person field)
         if self.is_of_same_feast(other) {
             return true;
         }
-        if let (Some(fd1), Some(fd2)) = (self.assoc_feast_details(), other.assoc_feast_details()) {
-            // the Persons lower-ranked than Joseph are categories, not specific persons
-            // while different feasts of the Lord are considered to have different subjects
-            // as they deal with different mysteries
-            if fd1.person >= Person::Joseph
-                && fd1.person != Person::OurLord
-                && fd1.person == fd2.person
-            {
-                return true;
-            }
-            if (fd1.id == "ss-petri-et-pauli-app" && fd2.id == "commemoratio-s-pauli-ap")
-                || (fd2.id == "ss-petri-et-pauli-app" && fd1.id == "commemoratio-s-pauli-ap")
-            {
-                return true;
-            }
+        let (Some(fd1), Some(fd2)) = (self.assoc_feast_details(), other.assoc_feast_details())
+        else {
+            return false;
+        };
+        // the Persons lower-ranked than St Joseph are categories, not specific persons
+        // while different feasts of the Lord are considered to have different subjects
+        // as they deal with different mysteries
+        if fd1.person >= Person::StJoseph
+            && fd1.person != Person::OurLord
+            && fd1.person == fd2.person
+        {
+            return true;
+        }
+        if fd1.id == "in-purificatione-bmv" && fd2.person == Person::OurLady {
+            return true;
+        }
+        if fd1.id == "ss-petri-et-pauli-app" && fd2.id == "commemoratio-s-pauli-ap" {
+            return true;
+        }
+        // TODO: there might be some more broadly applicable rubric that explains why
+        // the octave day of Corpus Christi isn't commemorated in the office of the Sacred Heart
+        if fd1.id == "ss-corporis-christi" && fd2.id == "ss-cordis-jesu" {
+            return true;
         }
         false
     }
@@ -702,15 +713,6 @@ pub trait RubricsSystem {
                     true
                 }
             })
-            .filter(|&&off| {
-                // this takes care of one specific case, where a day within an octave is followed
-                // by the octave day, but the octave day is superseded by a feast
-                // in which case (in pre-55 rubrics) the commemoration at 1V of the feast is taken
-                // from 2V of the preceding day within the octave, not 1V of the octave day
-                // the 1939 breviary has an explicit rubric about this before the octave day of
-                // Corpus Christi
-                !off.is_of_same_feast(praec)
-            })
             .map(|&off| VespersComm::FirstVespers(off))
             .collect();
 
@@ -722,8 +724,10 @@ pub trait RubricsSystem {
             .sort_by(|&c1, &c2| self.compare_commemoration_order(c1.office(), c2.office()));
         // remove commemorations of the same subject
         // assumes that the commemoration that comes later is the one that should be removed
-        // in practice this doesn't come up much because we've already covered all the cases with
-        // octaves above
+        // in particular this correctly handles the case where the office on the preceding day was
+        // the last day within an octave, and the octave day is reduced to a commemoration
+        // in which case the commemoration at vespers is 2V of the day within the octave, not 1V of
+        // the octave day
         let mut to_commemorate_final: Vec<VespersComm<'a>> = Vec::new();
         for comm in to_commemorate {
             if !to_commemorate_final

@@ -1,3 +1,5 @@
+use log::warn;
+
 use super::*;
 
 #[derive(Clone, Copy)]
@@ -555,6 +557,7 @@ impl RubricsSystem for Rubrics1939 {
         if loser == Office::OurLadyOnSaturday {
             // this needs to be a separate case from wants_commemoration() because OLOS is
             // sometimes commemorated in concurrence
+            warn!("Our Lady on Saturday is the loser in concurrence--it shouldn't have been added to the calendar here in the first place");
             return false;
         }
         if winner.is_of_same_subject(loser) {
