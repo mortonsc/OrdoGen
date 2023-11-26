@@ -177,8 +177,8 @@ pub trait Calendar {
         let ch = CalendarHelper::new(year);
         let mut to_add: Vec<(usize, Office)> = Vec::new();
         for (day, offs) in days.iter().enumerate() {
-            for off in offs {
-                let &Office::Feast(FeastDetails {
+            for &off in offs {
+                let Office::Feast(FeastDetails {
                     octave: Some(rank),
                     proper_date,
                     ..
