@@ -84,7 +84,7 @@ impl Calendar1939 {
     }
 }
 
-pub static CALENDAR_OF_SAINTS: [CalendarEntry; 315] = [
+pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
     (
         1,
         1,
@@ -604,6 +604,7 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 315] = [
         FeastDetails::new("s-francisci-caracciolo-c", FeastRank::Double),
     ),
     (6, 5, FeastDetails::new("s-bonifatii-em", FeastRank::Double)),
+    (6, 6, FeastDetails::new("s-norbertii-ec", FeastRank::Double)),
     (
         6,
         9,
@@ -889,8 +890,18 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 315] = [
     ),
     (
         8,
+        1,
+        FeastDetails::new("ss-machabaeorum-mm", FeastRank::Commemoration),
+    ),
+    (
+        8,
         2,
         FeastDetails::new("s-alfonsi-mariae-de-ligorio-ecd", FeastRank::Double),
+    ),
+    (
+        8,
+        2,
+        FeastDetails::new("s-stephani-i-pm", FeastRank::Commemoration),
     ),
     (
         8,
@@ -1184,6 +1195,11 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 315] = [
         22,
         FeastDetails::new("s-thomae-de-villanova-ec", FeastRank::Double),
     ),
+    (
+        9,
+        22,
+        FeastDetails::new("ss-mauritii-et-soc-mm", FeastRank::Commemoration),
+    ),
     (9, 23, FeastDetails::new("s-lini-pm", FeastRank::Semidouble)),
     (
         9,
@@ -1275,12 +1291,7 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 315] = [
     (
         10,
         9,
-        FeastDetails::new("s-joannis-leonardi-c", FeastRank::Double),
-    ),
-    (
-        10,
-        9,
-        FeastDetails::new("ss-dionysii-e-et-soc-mm", FeastRank::Commemoration),
+        FeastDetails::new("ss-dionysii-e-et-soc-mm", FeastRank::Semidouble),
     ),
     (
         10,

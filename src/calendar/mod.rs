@@ -119,9 +119,7 @@ pub trait Calendar {
         let calendar = self.calendar_of_saints(year);
         let mut days: Vec<Vec<Office<'a>>> = vec![Vec::new(); ch.n_days()];
         for (month, day, feast_details) in calendar {
-            let ord = ch.ordinal0_of_feast_date(month, day);
-            let off = Office::Feast(feast_details);
-            days[ord].push(off);
+            days[ch.ordinal0_of_feast_date(month, day)].push(Office::Feast(feast_details));
         }
 
         let all_souls = ch.ordinal0(11, 2);

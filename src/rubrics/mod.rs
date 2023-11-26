@@ -638,25 +638,31 @@ pub trait RubricsSystem {
                 office_of_day, occs[0]
             );
         }
-        // reverse because we want to deal with higher-ranked things first
-        for &occ in occs.iter().rev() {
+        for occ in occs {
             let outcome = self.occurrence_outcome(office_of_day, occ);
             assert_eq!(outcome.office_to_celebrate, OfficeIs::OfTheFirst);
             if outcome.loser_is == LoserIs::Translated {
                 to_translate.push(occ);
-            } else if outcome.loser_is == LoserIs::Commemorated
-                && to_commemorate
-                    .iter()
-                    .all(|&c| self.occ_admits_commemoration(c, occ, Hour::Lauds, false))
-            {
+            } else if outcome.loser_is == LoserIs::Commemorated {
                 to_commemorate.push(occ);
             }
         }
-        to_commemorate.sort_by(|&c1, &c2| self.compare_commemoration_order(c1, c2));
+        let mut to_commemorate_final: Vec<Office> = Vec::new();
+        // This extra check removes vigils that fall on the same day as a commemorated greater
+        // feria
+        for comm in to_commemorate {
+            if to_commemorate_final
+                .iter()
+                .all(|&c| self.occ_admits_commemoration(c, comm, Hour::Lauds, false))
+            {
+                to_commemorate_final.push(comm);
+            }
+        }
+        to_commemorate_final.sort_by(|&c1, &c2| self.compare_commemoration_order(c1, c2));
         (
             OrderedLauds {
                 office_of_day,
-                to_commemorate,
+                to_commemorate: to_commemorate_final,
             },
             to_translate,
         )
@@ -673,19 +679,14 @@ pub trait RubricsSystem {
             // this covers the case where praec has no 2V and seq has no 1V,
             // which happens in pre-55 rubrics when a simple feast is followed by a feria
             // (the rubrics actually analyze this case as the following feria gaining 1st vespers)
-            Office::Feria {
-                id: None,
-                rank: FeriaRank::Common,
-                has_second_vespers: true,
-                commemorated_at_vespers: false,
-            }
+            Office::feria(FeriaRank::Common, true)
         };
         let seq = if self.has_first_vespers(seq_day.office_of_day, seq_is_sunday) {
             seq_day.office_of_day
         } else {
             Office::Empty
         };
-        let mut to_commemorate: Vec<VespersComm<'a>> = Vec::new();
+        let mut to_commemorate: Vec<VespersComm> = Vec::new();
         let co = self.concurrence_outcome(praec, seq, seq_is_sunday);
         let vespers = co.office_to_celebrate.applied_to(praec, seq);
         if co.praec_wins() && co.has_comm {
@@ -694,7 +695,7 @@ pub trait RubricsSystem {
             to_commemorate.push(VespersComm::SecondVespers(praec));
         }
         let comm_of_praec_seq = !to_commemorate.is_empty();
-        let comms_from_praec: Vec<VespersComm<'a>> = praec_day
+        let comms_from_praec: Vec<VespersComm> = praec_day
             .to_commemorate
             .iter()
             .filter(|&&off| {
@@ -706,20 +707,20 @@ pub trait RubricsSystem {
             })
             .map(|&off| VespersComm::SecondVespers(off))
             .collect();
-        let comms_from_seq: Vec<VespersComm<'a>> = seq_day
+        let comms_from_seq: Vec<VespersComm> = seq_day
             .to_commemorate
             .iter()
+            .filter(|&&off| {
+                // (pre 55) 1st vespers of a day within an octave is only commemorated when it's the
+                // office of the following day, not when it's just commemorated
+                !off.is_day_within_octave()
+            })
             .filter(|&&off| {
                 if co.praec_wins() {
                     self.praec_admits_commemoration(praec, off, seq_is_sunday)
                 } else {
                     self.occ_admits_commemoration(seq, off, Hour::FirstVespers, seq_is_sunday)
                 }
-            })
-            .filter(|&&off| {
-                // (pre 55) 1st vespers of a day within an octave is only commemorated when its the
-                // office of the following day, not when it's just commemorated
-                !off.is_day_within_octave()
             })
             .map(|&off| VespersComm::FirstVespers(off))
             .collect();
@@ -736,7 +737,7 @@ pub trait RubricsSystem {
         // the last day within an octave, and the octave day is reduced to a commemoration
         // in which case the commemoration at vespers is 2V of the day within the octave, not 1V of
         // the octave day
-        let mut to_commemorate_final: Vec<VespersComm<'a>> = Vec::new();
+        let mut to_commemorate_final: Vec<VespersComm> = Vec::new();
         for comm in to_commemorate {
             if !to_commemorate_final
                 .iter()

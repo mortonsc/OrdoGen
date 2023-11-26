@@ -287,6 +287,10 @@ impl Rubrics1939 {
                 ..
             } => 8,
             // TODO: Friday after oct asc => 7
+            Office::Feria {
+                rank: FeriaRank::FridayAfterOctAsc,
+                ..
+            } => 7,
             Office::Feria { rank, .. } if rank > FeriaRank::Common => 6,
             Office::Vigil {
                 rank: VigilRank::Common,
@@ -642,6 +646,8 @@ impl RubricsSystem for Rubrics1939 {
         ) {
             return false;
         }
+        // The Tuesdays of Easter and Pentecost admit a commemoration at Vespers of a following
+        // feast
         if matches!(
             praec,
             Office::Feria {
@@ -649,7 +655,10 @@ impl RubricsSystem for Rubrics1939 {
                 ..
             }
         ) {
-            return false;
+            return match seq {
+                Office::Feast(FeastDetails { rank, .. }) => rank >= FeastRank::Semidouble,
+                _ => false,
+            };
         }
         // TODO: 1st class feasts of the Lord admit fewer commemorations (?)
         if matches!(
@@ -659,6 +668,7 @@ impl RubricsSystem for Rubrics1939 {
                 ..
             })
         ) {
+            // TODO: make the default case false
             return match seq {
                 Office::Feast(FeastDetails { rank, .. }) => rank >= FeastRank::Semidouble,
                 Office::WithinOctave { rank, .. } => rank >= OctaveRank::ThirdOrder,
@@ -687,8 +697,6 @@ impl RubricsSystem for Rubrics1939 {
                 rank: FeastRank::DoubleFirstClass,
                 ..
             }) => match praec {
-                // TODO: 1V of the Sacred Heart shouldn't admit a commemoration of the octave day
-                // of Corpus Christi
                 Office::Sunday { .. } => true,
                 Office::Feria { rank, .. } => rank >= FeriaRank::ThirdClassAdvent,
                 Office::Feast(FeastDetails { rank, .. }) => rank >= FeastRank::DoubleSecondClass,
