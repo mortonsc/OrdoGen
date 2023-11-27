@@ -543,6 +543,14 @@ pub enum Vespers<'a> {
     SplitAtCap(Office<'a>, Office<'a>),
 }
 
+impl<'a> Vespers<'a> {
+    pub fn office(self) -> Office<'a> {
+        match self {
+            Self::FirstVespers(off) | Self::SecondVespers(off) | Self::SplitAtCap(_, off) => off,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum VespersComm<'a> {
     #[serde(borrow)]
@@ -621,6 +629,10 @@ pub trait RubricsSystem {
     }
     fn admits_our_lady_on_saturday(&self, off: Office) -> bool;
     fn admits_anticipated_sunday(&self, off: Office) -> bool;
+    // Returns how many commemorations are permitted within the given Office (at either Lauds or
+    // Vespers
+    // None means there is no limit
+    fn n_commemorations_limit(&self, off: Office) -> Option<u32>;
     fn occurrence_outcome(&self, occ1: Office, occ2: Office) -> OccurrenceOutcome {
         let ord = self.compare_precedence_occ(occ1, occ2);
         let office_to_celebrate = match ord {
@@ -692,6 +704,9 @@ pub trait RubricsSystem {
             }
         }
         to_commemorate_final.sort_by(|&c1, &c2| self.compare_commemoration_order(c1, c2));
+        if let Some(limit) = self.n_commemorations_limit(office_of_day) {
+            to_commemorate_final.truncate(limit as usize);
+        }
         (
             OrderedLauds {
                 office_of_day,
@@ -778,6 +793,9 @@ pub trait RubricsSystem {
             {
                 to_commemorate_final.push(comm);
             }
+        }
+        if let Some(limit) = self.n_commemorations_limit(vespers.office()) {
+            to_commemorate_final.truncate(limit as usize);
         }
 
         OrderedVespers {

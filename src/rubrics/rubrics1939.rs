@@ -732,4 +732,7 @@ impl RubricsSystem for Rubrics1939 {
             _ => panic!("trying to anticipate a Sunday to unexpected day: {:?}", off),
         }
     }
+    fn n_commemorations_limit(&self, _off: Office) -> Option<u32> {
+        None
+    }
 }

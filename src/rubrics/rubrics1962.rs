@@ -5,8 +5,16 @@ use log::error;
 #[derive(Clone, Copy)]
 pub struct Rubrics1962;
 
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum ClassRank {
+    FourthClass,
+    ThirdClass,
+    SecondClass,
+    FirstClass,
+}
+
 impl Rubrics1962 {
-    fn class_number(&self, off: Office) -> Option<u32> {
+    fn class_rank(&self, off: Office) -> Option<ClassRank> {
         match off {
             Office::Sunday {
                 rank: SundayRank::FirstClass,
@@ -28,7 +36,7 @@ impl Rubrics1962 {
                 rank: VigilRank::FirstClass,
                 ..
             }
-            | Office::AllSouls => Some(1),
+            | Office::AllSouls => Some(ClassRank::FirstClass),
             Office::Sunday {
                 rank: SundayRank::SecondClass,
                 ..
@@ -48,7 +56,7 @@ impl Rubrics1962 {
             | Office::Vigil {
                 rank: VigilRank::SecondClass,
                 ..
-            } => Some(2),
+            } => Some(ClassRank::SecondClass),
             Office::Feast(FeastDetails {
                 rank: FeastRank::Double,
                 ..
@@ -60,7 +68,7 @@ impl Rubrics1962 {
             | Office::Vigil {
                 rank: VigilRank::Common,
                 ..
-            } => Some(3),
+            } => Some(ClassRank::ThirdClass),
             Office::Feast(FeastDetails {
                 rank: FeastRank::Commemoration,
                 ..
@@ -69,7 +77,7 @@ impl Rubrics1962 {
                 rank: FeriaRank::Common,
                 ..
             }
-            | Office::OurLadyOnSaturday => Some(4),
+            | Office::OurLadyOnSaturday => Some(ClassRank::FourthClass),
             _ => None,
         }
     }
@@ -290,13 +298,7 @@ impl RubricsSystem for Rubrics1962 {
     ) -> ConcurrenceOutcome {
         // TODO: confirm whether the octave of the Nativity requires a specical case
         assert!(self.has_second_vespers(praec));
-        // assert!(self.has_first_vespers(seq, seq_is_sunday));
-        if !self.has_first_vespers(seq, seq_is_sunday) {
-            error!(
-                "Office was expected to have first vespers (is_sunday = {}): {}",
-                seq_is_sunday, seq
-            );
-        }
+        assert!(self.has_first_vespers(seq, seq_is_sunday));
         let office_to_celebrate = self.compare_precedence_conc(praec, seq);
         let has_comm = match office_to_celebrate {
             VespersIs::OfThePreceding => self.praec_admits_commemoration(praec, seq, seq_is_sunday),
@@ -378,7 +380,7 @@ impl RubricsSystem for Rubrics1962 {
         ) {
             return false;
         }
-        if self.class_number(winner) == Some(1) {
+        if self.class_rank(winner) == Some(ClassRank::FirstClass) {
             self.is_privileged_commemoration(loser)
         } else if winner.is_sunday() {
             self.is_privileged_commemoration(loser)
@@ -432,5 +434,12 @@ impl RubricsSystem for Rubrics1962 {
     // No anticipated Sundays in the 62 rubrics
     fn admits_anticipated_sunday(&self, _off: Office) -> bool {
         false
+    }
+    fn n_commemorations_limit(&self, off: Office) -> Option<u32> {
+        match self.class_rank(off) {
+            Some(ClassRank::FirstClass | ClassRank::SecondClass) => Some(1),
+            Some(ClassRank::ThirdClass | ClassRank::FourthClass) => Some(2),
+            None => None,
+        }
     }
 }
