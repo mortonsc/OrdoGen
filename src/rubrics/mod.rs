@@ -5,11 +5,13 @@ use std::cmp::Ordering;
 
 mod display;
 mod rubrics1939;
+mod rubrics1962;
 
 #[cfg(test)]
 mod tests;
 
 pub use rubrics1939::Rubrics1939;
+pub use rubrics1962::Rubrics1962;
 
 // TODO:
 // * The Purification is a feast both of our Lord and our Lady
@@ -21,6 +23,10 @@ fn true_is_greater(lhs: bool, rhs: bool) -> Ordering {
         (false, true) => Ordering::Less,
         _ => Ordering::Equal,
     }
+}
+
+fn false_is_greater(lhs: bool, rhs: bool) -> Ordering {
+    true_is_greater(lhs, rhs).reverse()
 }
 
 // listed from lowest-to-highest so the ordering is correct

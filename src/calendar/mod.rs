@@ -3,6 +3,7 @@ use liturgical::western::easter;
 use time::util::is_leap_year;
 
 pub mod calendar1939;
+pub mod calendar1962;
 
 #[cfg(test)]
 mod tests;

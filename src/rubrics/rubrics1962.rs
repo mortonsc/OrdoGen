@@ -1,7 +1,7 @@
 use super::*;
 
 #[derive(Clone, Copy)]
-struct Rubrics1962;
+pub struct Rubrics1962;
 
 impl Rubrics1962 {
     fn class_number(&self, off: Office) -> Option<u32> {
