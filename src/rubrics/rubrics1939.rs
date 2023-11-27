@@ -566,7 +566,7 @@ impl RubricsSystem for Rubrics1939 {
             Office::Feast(FeastDetails {
                 rank: FeastRank::DoubleFirstClass,
                 sub_rank: FeastSubRank::Primary,
-                person: Person::OurLord | Person::Trinity,
+                person: Person::OurLord,
                 is_local: false,
                 ..
             }) => match loser {

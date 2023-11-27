@@ -38,14 +38,14 @@ const ASCENSION: Office = Office::feast("in-ascensione-dnjc", FeastRank::DoubleF
     .done();
 
 const PENTECOST: Office = Office::feast("dom-pentecostes", FeastRank::DoubleFirstClass)
-    .with_person(Person::Trinity)
+    .with_person(Person::OurLord)
     .make_feriatum()
     .with_vigil(VigilRank::FirstClass)
     .with_octave(OctaveRank::FirstOrder)
     .done();
 
 const TRINITY_SUNDAY: Office = Office::feast("dom-ss-trinitatis", FeastRank::DoubleFirstClass)
-    .with_person(Person::Trinity)
+    .with_person(Person::OurLord)
     .make_feriatum()
     .done();
 

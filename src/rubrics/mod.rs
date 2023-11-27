@@ -69,7 +69,6 @@ pub enum Person {
     Angel,
     OurLady,
     OurLord,
-    Trinity,
 }
 
 #[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Serialize, Deserialize)]
