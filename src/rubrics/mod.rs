@@ -577,8 +577,9 @@ impl<'a> OrderedVespers<'a> {
 pub trait RubricsSystem {
     fn has_first_vespers(&self, off: Office, is_sunday: bool) -> bool;
     fn has_second_vespers(&self, off: Office) -> bool;
+    // Returns true if off should be translated if superseded in occurrence
+    fn is_translated(&self, off: Office) -> bool;
     fn admits_translated_feast(&self, off: Office) -> bool;
-    fn occurrence_outcome(&self, occ1: Office, occ2: Office) -> OccurrenceOutcome;
     // assumes both praec and seq are the office of their respective days
     fn concurrence_outcome(
         &self,
@@ -615,6 +616,33 @@ pub trait RubricsSystem {
     }
     fn admits_our_lady_on_saturday(&self, off: Office) -> bool;
     fn admits_anticipated_sunday(&self, off: Office) -> bool;
+    fn occurrence_outcome(&self, occ1: Office, occ2: Office) -> OccurrenceOutcome {
+        let ord = self.compare_precedence_occ(occ1, occ2);
+        let office_to_celebrate = match ord {
+            Ordering::Greater => OfficeIs::OfTheFirst,
+            Ordering::Less => OfficeIs::OfTheSecond,
+            Ordering::Equal => {
+                warn!(
+                    "Two offices in occurrence compared equal: {}, {}",
+                    occ1, occ2
+                );
+                OfficeIs::OfTheFirst
+            }
+        };
+        let (winner, loser) = office_to_celebrate.winner_first(occ1, occ2);
+        let loser_is = if self.is_translated(loser) {
+            LoserIs::Translated
+            //is_sunday doesn't matter here
+        } else if self.occ_admits_commemoration(winner, loser, Hour::Lauds, true) {
+            LoserIs::Commemorated
+        } else {
+            LoserIs::Omitted
+        };
+        OccurrenceOutcome {
+            office_to_celebrate,
+            loser_is,
+        }
+    }
     fn order_lauds<'a>(&self, occs: &[Office<'a>]) -> (OrderedLauds<'a>, Vec<Office<'a>>) {
         let mut to_commemorate: Vec<Office<'a>> = Vec::new();
         let mut to_translate: Vec<Office<'a>> = Vec::new();

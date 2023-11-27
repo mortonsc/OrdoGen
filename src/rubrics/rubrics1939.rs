@@ -329,10 +329,6 @@ impl Rubrics1939 {
             Ordering::Equal
         }
     }
-    fn is_translated(&self, off: Office) -> bool {
-        off.feast_details()
-            .map_or(false, |fd| fd.rank >= FeastRank::DoubleSecondClass)
-    }
     // returns whether off is of the sort to be commemorated
     // within an occuring office at the given hour
     fn wants_commemoration(&self, off: Office, hour: Hour, is_sunday: bool) -> bool {
@@ -397,6 +393,10 @@ impl RubricsSystem for Rubrics1939 {
             _ => true,
         }
     }
+    fn is_translated(&self, off: Office) -> bool {
+        off.feast_details()
+            .map_or(false, |fd| fd.rank >= FeastRank::DoubleSecondClass)
+    }
     fn admits_translated_feast(&self, off: Office) -> bool {
         match off {
             Office::Sunday { .. } => false,
@@ -407,28 +407,6 @@ impl RubricsSystem for Rubrics1939 {
             Office::Vigil { rank, .. } => rank < VigilRank::SecondClass,
             Office::AllSouls => false,
             _ => true,
-        }
-    }
-    fn occurrence_outcome(&self, occ1: Office, occ2: Office) -> OccurrenceOutcome {
-        let ord = self.compare_precedence_occ(occ1, occ2);
-        let office_to_celebrate = match ord {
-            // the rubrics assume there will never be occuring feasts of perfectly equal precedence
-            // so how we treat that case is arbitrary
-            Ordering::Greater | Ordering::Equal => OfficeIs::OfTheFirst,
-            Ordering::Less => OfficeIs::OfTheSecond,
-        };
-        let (winner, loser) = office_to_celebrate.winner_first(occ1, occ2);
-        let loser_is = if self.is_translated(loser) {
-            LoserIs::Translated
-            //is_sunday doesn't matter here
-        } else if self.occ_admits_commemoration(winner, loser, Hour::Lauds, true) {
-            LoserIs::Commemorated
-        } else {
-            LoserIs::Omitted
-        };
-        OccurrenceOutcome {
-            office_to_celebrate,
-            loser_is,
         }
     }
     fn concurrence_outcome(
