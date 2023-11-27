@@ -54,6 +54,5 @@ fn print_ordo(year: i32, calendar: impl Calendar, rubrics: impl RubricsSystem) {
 
 fn main() {
     env_logger::init();
-    // print_ordo(2023, calendar::calendar1939::Calendar1939, Rubrics1939);
-    print_temporal_cycle(2023, Calendar1962);
+    print_ordo(2023, Calendar1962, Rubrics1962);
 }

@@ -6,17 +6,12 @@ impl Calendar1962 {
     pub fn moveable_feasts<'a>(self, year: i32) -> Vec<CalendarEntry<'a>> {
         let mut entries: Vec<CalendarEntry<'a>> = Vec::new();
         let ch = CalendarHelper::new(year);
-        let (holy_family_m, holy_family_d) = ch.month_day(ch.sunday_after(ch.epiphany()).unwrap());
 
-        let holy_family_d = if holy_family_d == 13 {
-            12
-        } else {
-            holy_family_d
-        };
+        let (holy_family_m, holy_family_d) = ch.month_day(ch.sunday_after(ch.epiphany()).unwrap());
         entries.push((
             holy_family_m,
             holy_family_d,
-            FeastDetails::new("s-familiae-jmj", FeastRank::GreaterDouble)
+            FeastDetails::new("s-familiae-jmj", FeastRank::DoubleSecondClass)
                 .with_person(Person::OurLord),
         ));
 
@@ -26,14 +21,21 @@ impl Calendar1962 {
         } else {
             2
         };
-        // TODO: feast of Our Lord and Our Lady
+
         entries.push((
             2,
             purification_d,
             FeastDetails::new("in-purificatione-bmv", FeastRank::DoubleSecondClass)
                 .with_proper_date(2, 2)
-                .with_person(Person::OurLord)
-                .make_feriatum(),
+                .with_person(Person::OurLord),
+        ));
+
+        let (sorrows_m, sorrows_d) = ch.month_day(ch.easter() - 9);
+        entries.push((
+            sorrows_m,
+            sorrows_d,
+            FeastDetails::new("septem-dolorum-bmv-temp-pass", FeastRank::Commemoration)
+                .with_person(Person::OurLady),
         ));
 
         let annunciation = ch.ordinal0(3, 25);
@@ -50,27 +52,7 @@ impl Calendar1962 {
             annunciation_d,
             FeastDetails::new("in-annuntiatione-bmv", FeastRank::DoubleFirstClass)
                 .with_proper_date(3, 25)
-                .with_person(Person::OurLady)
-                .make_feriatum(),
-        ));
-
-        let (sorrows_m, sorrows_d) = ch.month_day(ch.easter() - 9);
-        entries.push((
-            sorrows_m,
-            sorrows_d,
-            FeastDetails::new("septem-dolorum-bmv-temp-pass", FeastRank::GreaterDouble)
-                .with_person(Person::OurLady)
-                .make_secondary(),
-        ));
-
-        let (joseph_m, joseph_d) = ch.month_day(ch.easter() + 17);
-        entries.push((
-            joseph_m,
-            joseph_d,
-            FeastDetails::new("solemnitas-s-joseph", FeastRank::DoubleFirstClass)
-                .with_person(Person::StJoseph)
-                .with_octave(OctaveRank::Common)
-                .make_feriatum(),
+                .with_person(Person::OurLady),
         ));
 
         let ctk = ch.sunday_after(ch.ordinal0(10, 24)).unwrap();
@@ -90,9 +72,8 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
     (
         1,
         1,
-        FeastDetails::new("in-circumcisione-dnjc", FeastRank::DoubleSecondClass)
-            .with_person(Person::OurLord)
-            .make_feriatum(),
+        FeastDetails::new("in-octava-nativitatis-dnjc", FeastRank::DoubleFirstClass)
+            .with_person(Person::OurLord),
     ),
     (
         1,
@@ -103,15 +84,20 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
         1,
         6,
         FeastDetails::new("in-epiphania-dnjc", FeastRank::DoubleFirstClass)
-            .with_person(Person::OurLord)
-            .make_feriatum()
-            .with_vigil(VigilRank::SecondClass)
-            .with_octave(OctaveRank::SecondOrder),
+            .with_person(Person::OurLord),
     ),
     (
         1,
         11,
         FeastDetails::new("s-hygini-pm", FeastRank::Commemoration),
+    ),
+    (
+        1,
+        13,
+        FeastDetails::new(
+            "in-commemoratione-baptismatis-dnjc",
+            FeastRank::DoubleSecondClass,
+        ),
     ),
     (1, 14, FeastDetails::new("s-hilarii-ecd", FeastRank::Double)),
     (
@@ -129,18 +115,8 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
         15,
         FeastDetails::new("s-mauri-abb", FeastRank::Commemoration),
     ),
-    (
-        1,
-        16,
-        FeastDetails::new("s-marcelli-pm", FeastRank::Semidouble),
-    ),
+    (1, 16, FeastDetails::new("s-marcelli-pm", FeastRank::Double)),
     (1, 17, FeastDetails::new("s-antonii-abb", FeastRank::Double)),
-    // TODO: commemoration of St Paul
-    (
-        1,
-        18,
-        FeastDetails::new("cathedra-s-petri-romae", FeastRank::GreaterDouble).make_secondary(),
-    ),
     (
         1,
         18,
@@ -149,7 +125,7 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
     (
         1,
         19,
-        FeastDetails::new("ss-marii-et-soc-mm", FeastRank::Simple),
+        FeastDetails::new("ss-marii-et-soc-mm", FeastRank::Commemoration),
     ),
     (
         1,
@@ -165,12 +141,12 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
     (
         1,
         22,
-        FeastDetails::new("ss-vincentii-et-anastasii-mm", FeastRank::Semidouble),
+        FeastDetails::new("ss-vincentii-et-anastasii-mm", FeastRank::Double),
     ),
     (
         1,
         23,
-        FeastDetails::new("s-raymundi-de-penafort-c", FeastRank::Semidouble),
+        FeastDetails::new("s-raymundi-de-penafort-c", FeastRank::Double),
     ),
     (
         1,
@@ -182,7 +158,7 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
     (
         1,
         25,
-        FeastDetails::new("conversio-s-pauli-ap", FeastRank::GreaterDouble).make_secondary(),
+        FeastDetails::new("conversio-s-pauli-ap", FeastRank::Double),
     ),
     (
         1,
@@ -209,11 +185,7 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
         29,
         FeastDetails::new("s-francisci-salesii-ecd", FeastRank::Double),
     ),
-    (
-        1,
-        30,
-        FeastDetails::new("s-martinae-vm", FeastRank::Semidouble),
-    ),
+    (1, 30, FeastDetails::new("s-martinae-vm", FeastRank::Double)),
     (
         1,
         31,
@@ -221,7 +193,11 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
     ),
     (2, 1, FeastDetails::new("s-ignatii-em", FeastRank::Double)),
     // 2/2 Purification: handled as a special case because of its transfer rule
-    (2, 3, FeastDetails::new("s-blasii-em", FeastRank::Simple)),
+    (
+        2,
+        3,
+        FeastDetails::new("s-blasii-em", FeastRank::Commemoration),
+    ),
     (
         2,
         4,
@@ -258,9 +234,8 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
     (
         2,
         11,
-        FeastDetails::new("apparitio-bmv-immaculatae", FeastRank::GreaterDouble)
-            .with_person(Person::OurLady)
-            .make_secondary(),
+        FeastDetails::new("apparitio-bmv-immaculatae", FeastRank::Double)
+            .with_person(Person::OurLady),
     ),
     (
         2,
@@ -270,18 +245,26 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
             FeastRank::Double,
         ),
     ),
-    (2, 14, FeastDetails::new("s-valentini-m", FeastRank::Simple)),
+    (
+        2,
+        14,
+        FeastDetails::new("s-valentini-m", FeastRank::Commemoration),
+    ),
     (
         2,
         15,
-        FeastDetails::new("ss-faustini-et-jovitae-mm", FeastRank::Simple),
+        FeastDetails::new("ss-faustini-et-jovitae-mm", FeastRank::Commemoration),
     ),
-    (2, 18, FeastDetails::new("s-simeonis-em", FeastRank::Simple)),
+    (
+        2,
+        18,
+        FeastDetails::new("s-simeonis-em", FeastRank::Commemoration),
+    ),
     // TODO: comm of St Paul
     (
         2,
         22,
-        FeastDetails::new("cathedra-s-petri-antiochiae", FeastRank::GreaterDouble).make_secondary(),
+        FeastDetails::new("cathedra-s-petri", FeastRank::DoubleSecondClass),
     ),
     (
         2,
@@ -292,20 +275,14 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
         2,
         24,
         FeastDetails::new("s-matthiae-ap", FeastRank::DoubleSecondClass)
-            .with_person(Person::Apostle)
-            .with_vigil(VigilRank::Common)
-            .make_feriatum(),
+            .with_person(Person::Apostle),
     ),
     (
         2,
         27,
         FeastDetails::new("s-gabrielis-a-virgine-perdolente-c", FeastRank::Double),
     ),
-    (
-        3,
-        4,
-        FeastDetails::new("s-casimiri-c", FeastRank::Semidouble),
-    ),
+    (3, 4, FeastDetails::new("s-casimiri-c", FeastRank::Double)),
     (
         3,
         4,
@@ -334,7 +311,7 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
     (
         3,
         10,
-        FeastDetails::new("ss-quadraginta-mm", FeastRank::Semidouble),
+        FeastDetails::new("ss-quadraginta-mm", FeastRank::Double),
     ),
     (
         3,
@@ -351,18 +328,17 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
         3,
         19,
         FeastDetails::new("s-joseph-sponsi-bmv-c", FeastRank::DoubleFirstClass)
-            .with_person(Person::StJoseph)
-            .make_feriatum(),
+            .with_person(Person::StJoseph),
     ),
     (
         3,
         21,
-        FeastDetails::new("s-benedicti-abb", FeastRank::GreaterDouble),
+        FeastDetails::new("s-benedicti-abb", FeastRank::Double),
     ),
     (
         3,
         24,
-        FeastDetails::new("s-gabrielis-archangeli", FeastRank::GreaterDouble),
+        FeastDetails::new("s-gabrielis-archangeli", FeastRank::Double),
     ),
     // 3/25 the Annunciation is covered as a special case
     (
@@ -373,7 +349,7 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
     (
         3,
         28,
-        FeastDetails::new("s-joannis-a-capistrano-c", FeastRank::Semidouble),
+        FeastDetails::new("s-joannis-a-capistrano-c", FeastRank::Double),
     ),
     (
         4,
@@ -394,7 +370,7 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
     (
         4,
         13,
-        FeastDetails::new("s-hermenegildi-regis-m", FeastRank::Semidouble),
+        FeastDetails::new("s-hermenegildi-regis-m", FeastRank::Double),
     ),
     (4, 14, FeastDetails::new("s-justini-m", FeastRank::Double)),
     (
@@ -402,17 +378,21 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
         14,
         FeastDetails::new("ss-tiburtii-et-soc-mm", FeastRank::Commemoration),
     ),
-    (4, 17, FeastDetails::new("s-aniceti-pm", FeastRank::Simple)),
+    (
+        4,
+        17,
+        FeastDetails::new("s-aniceti-pm", FeastRank::Commemoration),
+    ),
     (4, 21, FeastDetails::new("s-anselmi-ecd", FeastRank::Double)),
     (
         4,
         22,
-        FeastDetails::new("ss-soteris-et-caji-pp", FeastRank::Semidouble),
+        FeastDetails::new("ss-soteris-et-caji-pp", FeastRank::Double),
     ),
     (
         4,
         23,
-        FeastDetails::new("s-georgii-m", FeastRank::Semidouble),
+        FeastDetails::new("s-georgii-m", FeastRank::Commemoration),
     ),
     (
         4,
@@ -427,7 +407,7 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
     (
         4,
         26,
-        FeastDetails::new("ss-cleti-et-marcellini-pp-mm", FeastRank::Semidouble),
+        FeastDetails::new("ss-cleti-et-marcellini-pp-mm", FeastRank::Double),
     ),
     (
         4,
@@ -439,11 +419,6 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
         28,
         FeastDetails::new("s-pauli-a-cruce-c", FeastRank::Double),
     ),
-    (
-        4,
-        28,
-        FeastDetails::new("s-vitalis-m", FeastRank::Commemoration),
-    ),
     (4, 29, FeastDetails::new("s-petri-m", FeastRank::Double)),
     (
         4,
@@ -453,8 +428,8 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
     (
         5,
         1,
-        FeastDetails::new("ss-philippi-et-jacobi-app", FeastRank::DoubleSecondClass)
-            .with_person(Person::Apostle),
+        FeastDetails::new("s-joseph-opificis-c", FeastRank::DoubleFirstClass)
+            .with_person(Person::StJoseph),
     ),
     (
         5,
@@ -464,33 +439,11 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
     (
         5,
         3,
-        FeastDetails::new("inventio-s-crucis", FeastRank::DoubleSecondClass)
-            .make_secondary()
-            .make_feriatum(),
-    ),
-    // TODO: according to SLP this isn't commemorated at 1V; why?
-    (
-        5,
-        3,
         FeastDetails::new("ss-alexandri-i-p-et-soc-mm-ec", FeastRank::Commemoration),
     ),
     (5, 4, FeastDetails::new("s-monicae-vid", FeastRank::Double)),
     (5, 5, FeastDetails::new("s-pii-v-pc", FeastRank::Double)),
-    (
-        5,
-        6,
-        FeastDetails::new("s-joannis-ante-portam-latinam", FeastRank::GreaterDouble)
-            .with_person(Person::Apostle)
-            .make_secondary(),
-    ),
     (5, 7, FeastDetails::new("s-stanislai-em", FeastRank::Double)),
-    (
-        5,
-        8,
-        FeastDetails::new("apparitio-s-michaelis-archangeli", FeastRank::GreaterDouble)
-            .with_person(Person::Angel)
-            .make_secondary(),
-    ),
     (
         5,
         9,
@@ -504,25 +457,31 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
     ),
     (
         5,
+        11,
+        FeastDetails::new("ss-philippi-et-jacobi-app", FeastRank::DoubleSecondClass)
+            .with_person(Person::Apostle),
+    ),
+    (
+        5,
         12,
-        FeastDetails::new("ss-nerei-et-soc-mm", FeastRank::Semidouble),
+        FeastDetails::new("ss-nerei-et-soc-mm", FeastRank::Double),
     ),
     (
         5,
         13,
         FeastDetails::new("s-roberti-bellarmino-ecd", FeastRank::Double),
     ),
-    (5, 14, FeastDetails::new("s-bonifatii-m", FeastRank::Simple)),
+    (
+        5,
+        14,
+        FeastDetails::new("s-bonifatii-m", FeastRank::Commemoration),
+    ),
     (
         5,
         15,
         FeastDetails::new("s-joannis-baptistae-de-la-salle-c", FeastRank::Double),
     ),
-    (
-        5,
-        16,
-        FeastDetails::new("s-ubaldi-ec", FeastRank::Semidouble),
-    ),
+    (5, 16, FeastDetails::new("s-ubaldi-ec", FeastRank::Double)),
     (
         5,
         17,
@@ -542,7 +501,7 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
     (
         5,
         20,
-        FeastDetails::new("s-bernardini-senensis-c", FeastRank::Semidouble),
+        FeastDetails::new("s-bernardini-senensis-c", FeastRank::Double),
     ),
     (
         5,
@@ -582,13 +541,17 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
     (
         5,
         29,
-        FeastDetails::new("s-mariae-magdalenae-de-pazzis-v", FeastRank::Semidouble),
+        FeastDetails::new("s-mariae-magdalenae-de-pazzis-v", FeastRank::Double),
     ),
-    (5, 30, FeastDetails::new("s-felicis-pm", FeastRank::Simple)),
+    (
+        5,
+        30,
+        FeastDetails::new("s-felicis-pm", FeastRank::Commemoration),
+    ),
     (
         5,
         31,
-        FeastDetails::new("s-angelae-mericiae-v", FeastRank::Double),
+        FeastDetails::new("bmv-reginae", FeastRank::DoubleSecondClass).with_person(Person::OurLady),
     ),
     (
         5,
@@ -597,8 +560,13 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
     ),
     (
         6,
+        1,
+        FeastDetails::new("s-angelae-mericiae-v", FeastRank::Double),
+    ),
+    (
+        6,
         2,
-        FeastDetails::new("ss-marcellini-et-soc-mm", FeastRank::Simple),
+        FeastDetails::new("ss-marcellini-et-soc-mm", FeastRank::Commemoration),
     ),
     (
         6,
@@ -610,17 +578,17 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
     (
         6,
         9,
-        FeastDetails::new("ss-primi-et-feliciani-mm", FeastRank::Simple),
+        FeastDetails::new("ss-primi-et-feliciani-mm", FeastRank::Commemoration),
     ),
     (
         6,
         10,
-        FeastDetails::new("s-margaritae-reginae-vid", FeastRank::Semidouble),
+        FeastDetails::new("s-margaritae-reginae-vid", FeastRank::Double),
     ),
     (
         6,
         11,
-        FeastDetails::new("s-barnabae-ap", FeastRank::GreaterDouble).with_person(Person::Apostle),
+        FeastDetails::new("s-barnabae-ap", FeastRank::Double).with_person(Person::Apostle),
     ),
     (
         6,
@@ -641,7 +609,7 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
     (
         6,
         15,
-        FeastDetails::new("ss-viti-et-soc-mm", FeastRank::Simple),
+        FeastDetails::new("ss-viti-et-soc-mm", FeastRank::Commemoration),
     ),
     (
         6,
@@ -663,7 +631,11 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
         19,
         FeastDetails::new("ss-gervasii-et-protasii-mm", FeastRank::Commemoration),
     ),
-    (6, 20, FeastDetails::new("s-silverii-pm", FeastRank::Simple)),
+    (
+        6,
+        20,
+        FeastDetails::new("s-silverii-pm", FeastRank::Commemoration),
+    ),
     (
         6,
         21,
@@ -675,9 +647,7 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
         24,
         FeastDetails::new("nativitas-s-joannis-baptistae", FeastRank::DoubleFirstClass)
             .with_person(Person::StJohnBaptist)
-            .with_vigil(VigilRank::Common)
-            .with_octave(OctaveRank::Common)
-            .make_feriatum(),
+            .with_vigil(VigilRank::SecondClass),
     ),
     (
         6,
@@ -689,30 +659,25 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
         26,
         FeastDetails::new("ss-joannnis-et-pauli-mm", FeastRank::Double),
     ),
-    (6, 28, FeastDetails::new("s-irenaei-em", FeastRank::Double)),
     (
         6,
         29,
         FeastDetails::new("ss-petri-et-pauli-app", FeastRank::DoubleFirstClass)
             .with_person(Person::Apostle)
-            .with_vigil(VigilRank::Common)
-            .with_octave(OctaveRank::Common)
-            .make_feriatum(),
+            .with_vigil(VigilRank::SecondClass),
     ),
     // TODO: commemoration of St Peter
     (
         6,
         30,
-        FeastDetails::new("commemoratio-s-pauli-ap", FeastRank::GreaterDouble)
-            .with_person(Person::Apostle)
-            .make_secondary(),
+        FeastDetails::new("commemoratio-s-pauli-ap", FeastRank::Double)
+            .with_person(Person::Apostle),
     ),
     (
         7,
         1,
         FeastDetails::new("pretiosissimi-sanguinis-dnjc", FeastRank::DoubleFirstClass)
-            .with_person(Person::OurLord)
-            .make_secondary(),
+            .with_person(Person::OurLord),
     ),
     (
         7,
@@ -722,9 +687,10 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
     ),
     (
         7,
-        3,
-        FeastDetails::new("s-leonis-ii-pc", FeastRank::Semidouble),
+        2,
+        FeastDetails::new("ss-processi-et-martiniani-mm", FeastRank::Commemoration),
     ),
+    (7, 3, FeastDetails::new("s-irenaei-em", FeastRank::Double)),
     (
         7,
         5,
@@ -738,17 +704,21 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
     (
         7,
         8,
-        FeastDetails::new("s-elisabeth-reginae-vid", FeastRank::Semidouble),
+        FeastDetails::new("s-elisabeth-reginae-vid", FeastRank::Double),
     ),
     (
         7,
         10,
         FeastDetails::new(
             "ss-septem-fratrum-mm-et-ss-rufinae-et-secundae-vv-mm",
-            FeastRank::Semidouble,
+            FeastRank::Double,
         ),
     ),
-    (7, 11, FeastDetails::new("s-pii-i-pm", FeastRank::Simple)),
+    (
+        7,
+        11,
+        FeastDetails::new("s-pii-i-pm", FeastRank::Commemoration),
+    ),
     (
         7,
         12,
@@ -761,33 +731,27 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
     ),
     (
         7,
-        13,
-        FeastDetails::new("s-anacleti-pm", FeastRank::Semidouble),
-    ),
-    (
-        7,
         14,
         FeastDetails::new("s-bonaventurae-ecd", FeastRank::Double),
     ),
     (
         7,
         15,
-        FeastDetails::new("s-henrici-imperatoris-c", FeastRank::Semidouble),
+        FeastDetails::new("s-henrici-imperatoris-c", FeastRank::Double),
     ),
     (
         7,
         16,
         FeastDetails::new(
             "commemoratio-bmv-de-monte-carmelo",
-            FeastRank::GreaterDouble,
+            FeastRank::Commemoration,
         )
-        .with_person(Person::OurLady)
-        .make_secondary(),
+        .with_person(Person::OurLady),
     ),
     (
         7,
         17,
-        FeastDetails::new("s-alexii-c", FeastRank::Semidouble),
+        FeastDetails::new("s-alexii-c", FeastRank::Commemoration),
     ),
     (
         7,
@@ -817,7 +781,16 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
         20,
         FeastDetails::new("s-margaritae-vm", FeastRank::Commemoration),
     ),
-    (7, 21, FeastDetails::new("s-praxedis-v", FeastRank::Simple)),
+    (
+        7,
+        21,
+        FeastDetails::new("s-laurentii-de-brundusio-cd", FeastRank::Double),
+    ),
+    (
+        7,
+        21,
+        FeastDetails::new("s-praxedis-v", FeastRank::Commemoration),
+    ),
     (
         7,
         22,
@@ -841,34 +814,27 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
     (
         7,
         25,
-        FeastDetails::new("s-jacobi-ap", FeastRank::DoubleSecondClass)
-            .with_person(Person::Apostle)
-            .with_vigil(VigilRank::Common)
-            .make_feriatum(),
+        FeastDetails::new("s-jacobi-ap", FeastRank::DoubleSecondClass).with_person(Person::Apostle),
     ),
     (
         7,
         26,
-        FeastDetails::new("s-annae-matris-bmv", FeastRank::DoubleSecondClass).make_feriatum(),
+        FeastDetails::new("s-annae-matris-bmv", FeastRank::DoubleSecondClass),
     ),
     (
         7,
         27,
-        FeastDetails::new("s-pantaleonis-m", FeastRank::Simple),
+        FeastDetails::new("s-pantaleonis-m", FeastRank::Commemoration),
     ),
     (
         7,
         28,
         FeastDetails::new(
             "ss-nazarii-et-celsi-mm-et-victoris-i-pm-ac-innocentii-pc",
-            FeastRank::Semidouble,
+            FeastRank::Double,
         ),
     ),
-    (
-        7,
-        29,
-        FeastDetails::new("s-marthae-v", FeastRank::Semidouble),
-    ),
+    (7, 29, FeastDetails::new("s-marthae-v", FeastRank::Double)),
     (
         7,
         29,
@@ -877,19 +843,9 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
     (
         7,
         30,
-        FeastDetails::new("ss-abdon-et-sennen-mm", FeastRank::Simple),
+        FeastDetails::new("ss-abdon-et-sennen-mm", FeastRank::Commemoration),
     ),
-    (
-        7,
-        31,
-        FeastDetails::new("s-ignatii-c", FeastRank::GreaterDouble),
-    ),
-    (
-        8,
-        1,
-        FeastDetails::new("s-petri-ad-vincula", FeastRank::GreaterDouble)
-            .with_person(Person::Apostle),
-    ),
+    (7, 31, FeastDetails::new("s-ignatii-c", FeastRank::Double)),
     (
         8,
         1,
@@ -905,21 +861,11 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
         2,
         FeastDetails::new("s-stephani-i-pm", FeastRank::Commemoration),
     ),
-    (
-        8,
-        3,
-        FeastDetails::new("inventio-s-stephani-protomartyris", FeastRank::Semidouble)
-            .make_secondary(),
-    ),
-    (
-        8,
-        4,
-        FeastDetails::new("s-dominici-c", FeastRank::GreaterDouble),
-    ),
+    (8, 4, FeastDetails::new("s-dominici-c", FeastRank::Double)),
     (
         8,
         5,
-        FeastDetails::new("dedicatio-s-mariae-ad-nives", FeastRank::GreaterDouble)
+        FeastDetails::new("dedicatio-s-mariae-ad-nives", FeastRank::Double)
             .with_person(Person::OurLady),
     ),
     (
@@ -945,12 +891,12 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
     (
         8,
         8,
-        FeastDetails::new("ss-cyriaci-largi-et-smaragdi-mm", FeastRank::Semidouble),
+        FeastDetails::new("s-joannis-mariae-vianney-c", FeastRank::Double),
     ),
     (
         8,
-        9,
-        FeastDetails::new("s-joannis-mariae-vianney", FeastRank::Double),
+        8,
+        FeastDetails::new("ss-cyriaci-largi-et-smaragdi-mm", FeastRank::Commemoration),
     ),
     (
         8,
@@ -961,20 +907,18 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
         8,
         10,
         FeastDetails::new("s-laurentii-m", FeastRank::DoubleSecondClass)
-            .with_vigil(VigilRank::Common)
-            .with_octave(OctaveRank::Simple)
-            .make_feriatum(),
+            .with_vigil(VigilRank::Common),
     ),
     (
         8,
         11,
-        FeastDetails::new("ss-tiburtii-et-susannae-v-mm", FeastRank::Simple),
+        FeastDetails::new("ss-tiburtii-et-susannae-v-mm", FeastRank::Commemoration),
     ),
     (8, 12, FeastDetails::new("s-clarae-v", FeastRank::Double)),
     (
         8,
         13,
-        FeastDetails::new("ss-hippolyti-et-cassiani-mm", FeastRank::Simple),
+        FeastDetails::new("ss-hippolyti-et-cassiani-mm", FeastRank::Commemoration),
     ),
     (
         8,
@@ -986,14 +930,12 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
         15,
         FeastDetails::new("assumptio-bmv", FeastRank::DoubleFirstClass)
             .with_person(Person::OurLady)
-            .with_vigil(VigilRank::Common)
-            .with_octave(OctaveRank::Common)
-            .make_feriatum(),
+            .with_vigil(VigilRank::SecondClass),
     ),
     (
         8,
         16,
-        FeastDetails::new("s-joachim-patris-bmv-c", FeastRank::DoubleSecondClass).make_feriatum(),
+        FeastDetails::new("s-joachim-patris-bmv-c", FeastRank::DoubleSecondClass),
     ),
     (8, 17, FeastDetails::new("s-hyacinthi-c", FeastRank::Double)),
     (
@@ -1022,6 +964,11 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
     (
         8,
         22,
+        FeastDetails::new("immaculati-cordis-bmv", FeastRank::DoubleSecondClass),
+    ),
+    (
+        8,
+        22,
         FeastDetails::new("ss-timothei-et-soc-mm", FeastRank::Commemoration),
     ),
     (
@@ -1033,19 +980,17 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
         8,
         24,
         FeastDetails::new("s-bartholomaei-ap", FeastRank::DoubleSecondClass)
-            .with_person(Person::Apostle)
-            .with_vigil(VigilRank::Common)
-            .make_feriatum(),
+            .with_person(Person::Apostle),
     ),
     (
         8,
         25,
-        FeastDetails::new("s-ludovici-regis-c", FeastRank::Semidouble),
+        FeastDetails::new("s-ludovici-regis-c", FeastRank::Double),
     ),
     (
         8,
         26,
-        FeastDetails::new("s-zephyrini-pm", FeastRank::Simple),
+        FeastDetails::new("s-zephyrini-pm", FeastRank::Commemoration),
     ),
     (
         8,
@@ -1065,7 +1010,7 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
     (
         8,
         29,
-        FeastDetails::new("decollatio-s-joannis-baptistae", FeastRank::GreaterDouble)
+        FeastDetails::new("decollatio-s-joannis-baptistae", FeastRank::Double)
             .with_person(Person::StJohnBaptist),
     ),
     (
@@ -1088,7 +1033,11 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
         31,
         FeastDetails::new("s-raymundi-nonnati-c", FeastRank::Double),
     ),
-    (9, 1, FeastDetails::new("s-aegidii-abb", FeastRank::Simple)),
+    (
+        9,
+        1,
+        FeastDetails::new("s-aegidii-abb", FeastRank::Commemoration),
+    ),
     (
         9,
         1,
@@ -1097,22 +1046,25 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
     (
         9,
         2,
-        FeastDetails::new("s-stephani-regis-c", FeastRank::Semidouble),
+        FeastDetails::new("s-stephani-regis-c", FeastRank::Double),
     ),
+    (9, 3, FeastDetails::new("s-pii-x-pc", FeastRank::Double)),
     (
         9,
         5,
-        FeastDetails::new("s-laurentii-justiniani-ec", FeastRank::Semidouble),
+        FeastDetails::new("s-laurentii-justiniani-ec", FeastRank::Double),
     ),
     (
         9,
         8,
         FeastDetails::new("nativitas-bmv", FeastRank::DoubleSecondClass)
-            .with_person(Person::OurLady)
-            .with_octave(OctaveRank::Simple)
-            .make_feriatum(),
+            .with_person(Person::OurLady),
     ),
-    (9, 9, FeastDetails::new("s-gorgonii-m", FeastRank::Simple)),
+    (
+        9,
+        9,
+        FeastDetails::new("s-gorgonii-m", FeastRank::Commemoration),
+    ),
     (
         9,
         10,
@@ -1121,19 +1073,17 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
     (
         9,
         11,
-        FeastDetails::new("ss-proti-et-hyacinthi-mm", FeastRank::Simple),
+        FeastDetails::new("ss-proti-et-hyacinthi-mm", FeastRank::Commemoration),
     ),
     (
         9,
         12,
-        FeastDetails::new("ss-nominis-mariae", FeastRank::GreaterDouble)
-            .with_person(Person::OurLady)
-            .make_secondary(),
+        FeastDetails::new("ss-nominis-mariae", FeastRank::Double).with_person(Person::OurLady),
     ),
     (
         9,
         14,
-        FeastDetails::new("exaltatio-s-crucis", FeastRank::GreaterDouble).make_secondary(),
+        FeastDetails::new("exaltatio-s-crucis", FeastRank::DoubleSecondClass),
     ),
     (
         9,
@@ -1142,8 +1092,7 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
             "septem-dolorum-bmv-mense-sept",
             FeastRank::DoubleSecondClass,
         )
-        .with_person(Person::OurLady)
-        .make_secondary(),
+        .with_person(Person::OurLady),
     ),
     (
         9,
@@ -1153,7 +1102,7 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
     (
         9,
         16,
-        FeastDetails::new("ss-cornelii-p-et-cypriani-e-mm", FeastRank::Semidouble),
+        FeastDetails::new("ss-cornelii-p-et-cypriani-e-mm", FeastRank::Double),
     ),
     (
         9,
@@ -1166,8 +1115,10 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
     (
         9,
         17,
-        FeastDetails::new("impressio-s-stigmatum-s-francisci-c", FeastRank::Double)
-            .make_secondary(),
+        FeastDetails::new(
+            "impressio-s-stigmatum-s-francisci-c",
+            FeastRank::Commemoration,
+        ),
     ),
     (
         9,
@@ -1182,15 +1133,13 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
     (
         9,
         20,
-        FeastDetails::new("ss-eustachii-et-soc-mm", FeastRank::Double),
+        FeastDetails::new("ss-eustachii-et-soc-mm", FeastRank::Commemoration),
     ),
     (
         9,
         21,
         FeastDetails::new("s-matthaei-ap-ev", FeastRank::DoubleSecondClass)
-            .with_person(Person::Apostle)
-            .with_vigil(VigilRank::Common)
-            .make_feriatum(),
+            .with_person(Person::Apostle),
     ),
     (
         9,
@@ -1202,7 +1151,7 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
         22,
         FeastDetails::new("ss-mauritii-et-soc-mm", FeastRank::Commemoration),
     ),
-    (9, 23, FeastDetails::new("s-lini-pm", FeastRank::Semidouble)),
+    (9, 23, FeastDetails::new("s-lini-pm", FeastRank::Double)),
     (
         9,
         23,
@@ -1211,24 +1160,22 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
     (
         9,
         24,
-        FeastDetails::new("bmv-de-mercede", FeastRank::GreaterDouble)
-            .with_person(Person::OurLady)
-            .make_secondary(),
+        FeastDetails::new("bmv-de-mercede", FeastRank::Commemoration).with_person(Person::OurLady),
     ),
     (
         9,
         26,
-        FeastDetails::new("ss-cypriani-et-justinae-v-mm", FeastRank::Simple),
+        FeastDetails::new("ss-cypriani-et-justinae-v-mm", FeastRank::Commemoration),
     ),
     (
         9,
         27,
-        FeastDetails::new("ss-cosmae-et-damiani-mm", FeastRank::Semidouble),
+        FeastDetails::new("ss-cosmae-et-damiani-mm", FeastRank::Double),
     ),
     (
         9,
         28,
-        FeastDetails::new("s-wenceslai-ducis-m", FeastRank::Semidouble),
+        FeastDetails::new("s-wenceslai-ducis-m", FeastRank::Double),
     ),
     (
         9,
@@ -1237,43 +1184,40 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
             "dedicatio-s-michaelis-archangeli",
             FeastRank::DoubleFirstClass,
         )
-        .with_person(Person::Angel)
-        .make_feriatum(),
+        .with_person(Person::Angel),
     ),
     (
         9,
         30,
         FeastDetails::new("s-hieronymi-cd", FeastRank::Double),
     ),
-    (10, 1, FeastDetails::new("s-remigii-ec", FeastRank::Simple)),
+    (
+        10,
+        1,
+        FeastDetails::new("s-remigii-ec", FeastRank::Commemoration),
+    ),
     (
         10,
         2,
-        FeastDetails::new("ss-angelorum-custodum", FeastRank::GreaterDouble)
-            .with_person(Person::Angel),
+        FeastDetails::new("ss-angelorum-custodum", FeastRank::Double).with_person(Person::Angel),
     ),
     (
         10,
         3,
         FeastDetails::new("s-teresiae-a-jesu-infante-v", FeastRank::Double),
     ),
-    (
-        10,
-        4,
-        FeastDetails::new("s-francisci-c", FeastRank::GreaterDouble),
-    ),
+    (10, 4, FeastDetails::new("s-francisci-c", FeastRank::Double)),
     (
         10,
         5,
-        FeastDetails::new("ss-placidi-et-soc-mm", FeastRank::Simple),
+        FeastDetails::new("ss-placidi-et-soc-mm", FeastRank::Commemoration),
     ),
     (10, 6, FeastDetails::new("s-brunonis-c", FeastRank::Double)),
     (
         10,
         7,
-        FeastDetails::new("ss-rosarii-bmv", FeastRank::DoubleSecondClass)
-            .with_person(Person::OurLady)
-            .make_secondary(),
+        FeastDetails::new("bmv-a-rosario", FeastRank::DoubleSecondClass)
+            .with_person(Person::OurLady),
     ),
     (
         10,
@@ -1282,35 +1226,39 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
     ),
     (
         10,
-        7,
-        FeastDetails::new("ss-sergii-et-soc-mm", FeastRank::Commemoration),
-    ),
-    (
-        10,
         8,
         FeastDetails::new("s-birgittae-vid", FeastRank::Double),
     ),
     (
         10,
+        8,
+        FeastDetails::new("ss-sergii-et-soc-mm", FeastRank::Commemoration),
+    ),
+    (
+        10,
         9,
-        FeastDetails::new("ss-dionysii-e-et-soc-mm", FeastRank::Semidouble),
+        FeastDetails::new("s-joannis-leonardi-c", FeastRank::Double),
+    ),
+    (
+        10,
+        9,
+        FeastDetails::new("ss-dionysii-e-et-soc-mm", FeastRank::Commemoration),
     ),
     (
         10,
         10,
-        FeastDetails::new("s-francisci-borgiae-c", FeastRank::Semidouble),
+        FeastDetails::new("s-francisci-borgiae-c", FeastRank::Double),
     ),
     (
         10,
         11,
         FeastDetails::new("maternitatis-bmv", FeastRank::DoubleSecondClass)
-            .with_person(Person::OurLady)
-            .make_secondary(),
+            .with_person(Person::OurLady),
     ),
     (
         10,
         13,
-        FeastDetails::new("s-eduardi-regis-c", FeastRank::Semidouble),
+        FeastDetails::new("s-eduardi-regis-c", FeastRank::Double),
     ),
     (
         10,
@@ -1321,7 +1269,7 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
     (
         10,
         16,
-        FeastDetails::new("s-hedwigis-vid", FeastRank::Semidouble),
+        FeastDetails::new("s-hedwigis-vid", FeastRank::Double),
     ),
     (
         10,
@@ -1347,7 +1295,7 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
     (
         10,
         21,
-        FeastDetails::new("s-hilarionis-abb", FeastRank::Simple),
+        FeastDetails::new("s-hilarionis-abb", FeastRank::Commemoration),
     ),
     (
         10,
@@ -1356,36 +1304,34 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
     ),
     (
         10,
+        23,
+        FeastDetails::new("s-antonii-mariae-claret-ec", FeastRank::Double),
+    ),
+    (
+        10,
         24,
-        FeastDetails::new("s-raphaelis-archangeli", FeastRank::GreaterDouble)
-            .with_person(Person::Angel),
+        FeastDetails::new("s-raphaelis-archangeli", FeastRank::Double).with_person(Person::Angel),
     ),
     (
         10,
         25,
-        FeastDetails::new("ss-chrysanthi-et-dariae-mm", FeastRank::Simple),
+        FeastDetails::new("ss-chrysanthi-et-dariae-mm", FeastRank::Commemoration),
     ),
     (
         10,
         26,
-        FeastDetails::new("s-evaristi-pm", FeastRank::Simple),
+        FeastDetails::new("s-evaristi-pm", FeastRank::Commemoration),
     ),
     (
         10,
         28,
         FeastDetails::new("ss-simonis-et-judae-app", FeastRank::DoubleSecondClass)
-            .with_person(Person::Apostle)
-            .with_vigil(VigilRank::Common)
-            .make_feriatum(),
+            .with_person(Person::Apostle),
     ),
     (
         11,
         1,
-        FeastDetails::new("omnium-sanctorum", FeastRank::DoubleFirstClass)
-            .make_feriatum()
-            .with_vigil(VigilRank::Common)
-            .with_octave(OctaveRank::Common)
-            .make_feriatum(),
+        FeastDetails::new("omnium-sanctorum", FeastRank::DoubleFirstClass),
     ),
     (11, 4, FeastDetails::new("s-caroli-ec", FeastRank::Double)),
     (
@@ -1433,13 +1379,9 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
     (
         11,
         12,
-        FeastDetails::new("s-martini-i-pm", FeastRank::Semidouble),
+        FeastDetails::new("s-martini-i-pm", FeastRank::Double),
     ),
-    (
-        11,
-        13,
-        FeastDetails::new("s-didaci-c", FeastRank::Semidouble),
-    ),
+    (11, 13, FeastDetails::new("s-didaci-c", FeastRank::Double)),
     (
         11,
         14,
@@ -1458,14 +1400,14 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
     (
         11,
         17,
-        FeastDetails::new("s-gregorii-thaumaturgi-ec", FeastRank::Semidouble),
+        FeastDetails::new("s-gregorii-thaumaturgi-ec", FeastRank::Double),
     ),
     (
         11,
         18,
         FeastDetails::new(
             "dedicatio-basilicarum-ss-petri-et-pauli-app",
-            FeastRank::GreaterDouble,
+            FeastRank::Double,
         ),
     ),
     (
@@ -1486,8 +1428,7 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
     (
         11,
         21,
-        FeastDetails::new("praesentatio-bmv", FeastRank::GreaterDouble)
-            .with_person(Person::OurLady),
+        FeastDetails::new("praesentatio-bmv", FeastRank::Double).with_person(Person::OurLady),
     ),
     (
         11,
@@ -1538,19 +1479,13 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
         11,
         30,
         FeastDetails::new("s-andreae-ap", FeastRank::DoubleSecondClass)
-            .with_person(Person::Apostle)
-            .with_vigil(VigilRank::Common)
-            .make_feriatum(),
+            .with_person(Person::Apostle),
     ),
-    (
-        12,
-        2,
-        FeastDetails::new("s-bibianae-vm", FeastRank::Semidouble),
-    ),
+    (12, 2, FeastDetails::new("s-bibianae-vm", FeastRank::Double)),
     (
         12,
         3,
-        FeastDetails::new("s-francisci-xaverii-c", FeastRank::GreaterDouble),
+        FeastDetails::new("s-francisci-xaverii-c", FeastRank::Double),
     ),
     (
         12,
@@ -1577,10 +1512,7 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
         12,
         8,
         FeastDetails::new("conceptio-immaculata-bmv", FeastRank::DoubleFirstClass)
-            .with_person(Person::OurLady)
-            .with_vigil(VigilRank::Common)
-            .with_octave(OctaveRank::Common)
-            .make_feriatum(),
+            .with_person(Person::OurLady),
     ),
     (
         12,
@@ -1590,57 +1522,47 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
     (
         12,
         11,
-        FeastDetails::new("s-damasi-i-pc", FeastRank::Semidouble),
+        FeastDetails::new("s-damasi-i-pc", FeastRank::Double),
     ),
     (12, 13, FeastDetails::new("s-luciae-vm", FeastRank::Double)),
-    (
-        12,
-        16,
-        FeastDetails::new("s-eusebii-em", FeastRank::Semidouble),
-    ),
+    (12, 16, FeastDetails::new("s-eusebii-em", FeastRank::Double)),
     (
         12,
         21,
-        FeastDetails::new("s-thomae-ap", FeastRank::DoubleSecondClass)
-            .with_person(Person::Apostle)
-            .with_vigil(VigilRank::Common)
-            .make_feriatum(),
+        FeastDetails::new("s-thomae-ap", FeastRank::DoubleSecondClass).with_person(Person::Apostle),
     ),
     (
         12,
         25,
         FeastDetails::new("nativitas-dnjc", FeastRank::DoubleFirstClass)
             .with_person(Person::OurLord)
-            .with_octave(OctaveRank::ThirdOrder)
-            .with_vigil(VigilRank::FirstClass)
-            .make_feriatum(),
+            .with_octave(OctaveRank::SecondOrder)
+            .with_vigil(VigilRank::FirstClass),
     ),
     (
         12,
         26,
-        FeastDetails::new("s-stephani-protomartyris", FeastRank::DoubleSecondClass)
-            .with_octave(OctaveRank::Simple)
-            .make_feriatum(),
+        FeastDetails::new("s-stephani-protomartyris", FeastRank::DoubleSecondClass),
     ),
     (
         12,
         27,
         FeastDetails::new("s-joannis-ap-ev", FeastRank::DoubleSecondClass)
-            .with_person(Person::Apostle)
-            .with_octave(OctaveRank::Simple)
-            .make_feriatum(),
+            .with_person(Person::Apostle),
     ),
     (
         12,
         28,
-        FeastDetails::new("ss-innocentium-mm", FeastRank::DoubleSecondClass)
-            .with_octave(OctaveRank::Simple)
-            .make_feriatum(),
+        FeastDetails::new("ss-innocentium-mm", FeastRank::DoubleSecondClass),
     ),
-    (12, 29, FeastDetails::new("s-thomas-em", FeastRank::Double)),
+    (
+        12,
+        29,
+        FeastDetails::new("s-thomas-em", FeastRank::Commemoration),
+    ),
     (
         12,
         31,
-        FeastDetails::new("s-silvestri-i-pc", FeastRank::Double),
+        FeastDetails::new("s-silvestri-i-pc", FeastRank::Commemoration),
     ),
 ];

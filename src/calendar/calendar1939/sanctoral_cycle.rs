@@ -84,7 +84,7 @@ impl Calendar1939 {
     }
 }
 
-pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
+pub static CALENDAR_OF_SAINTS: [CalendarEntry; 320] = [
     (
         1,
         1,
@@ -720,6 +720,11 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
     ),
     (
         7,
+        2,
+        FeastDetails::new("ss-processi-et-martiniani-mm", FeastRank::Commemoration),
+    ),
+    (
+        7,
         3,
         FeastDetails::new("s-leonis-ii-pc", FeastRank::Semidouble),
     ),
@@ -843,6 +848,11 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
             .with_person(Person::Apostle)
             .with_vigil(VigilRank::Common)
             .make_feriatum(),
+    ),
+    (
+        7,
+        25,
+        FeastDetails::new("s-christophori-m", FeastRank::Commemoration),
     ),
     (
         7,
@@ -1380,7 +1390,6 @@ pub static CALENDAR_OF_SAINTS: [CalendarEntry; 318] = [
         11,
         1,
         FeastDetails::new("omnium-sanctorum", FeastRank::DoubleFirstClass)
-            .make_feriatum()
             .with_vigil(VigilRank::Common)
             .with_octave(OctaveRank::Common)
             .make_feriatum(),

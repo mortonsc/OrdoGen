@@ -150,13 +150,12 @@ fn add_matins_id(ch: CalendarHelper, sunday: Office, ord: usize) -> Office {
 impl Calendar1939 {
     pub fn add_temporal_cycle_h(&self, ch: CalendarHelper, days: &mut [Vec<Office<'_>>]) {
         // Advent cycle
-        for week in 0..2 {
+        for week in 0..=1 {
             days[ch.advent1() + (week * 7)].push(SUNDAYS_OF_ADVENT[week]);
-            for day in 1..6 {
-                days[ch.advent1() + (week * 7) + day]
-                    .push(Office::feria(FeriaRank::ThirdClass, true));
+            for weekday in 1..=6 {
+                days[ch.advent1() + (week * 7) + weekday]
+                    .push(Office::feria(FeriaRank::ThirdClass, weekday < 6));
             }
-            days[ch.advent1() + (week * 7) + 6].push(Office::feria(FeriaRank::ThirdClass, false));
         }
         days[ch.advent1() + 14].push(SUNDAYS_OF_ADVENT[2]);
         days[ch.advent1() + 15].push(Office::feria(FeriaRank::ThirdClass, true));
@@ -231,11 +230,11 @@ impl Calendar1939 {
         days[lent1 + 4].push(Office::feria(FeriaRank::ThirdClass, true));
         days[lent1 + 5].push(Office::feria(FeriaRank::ThirdClass, true).with_id("fer-6-qt-quad"));
         days[lent1 + 6].push(Office::feria(FeriaRank::ThirdClass, false).with_id("sab-qt-quad"));
-        for week in 1..5 {
-            for day in 1..6 {
-                days[lent1 + (7 * week) + day].push(Office::feria(FeriaRank::ThirdClass, true));
+        for week in 1..=4 {
+            for weekday in 1..=6 {
+                days[lent1 + (7 * week) + weekday]
+                    .push(Office::feria(FeriaRank::ThirdClass, weekday < 6));
             }
-            days[lent1 + (7 * week) + 6].push(Office::feria(FeriaRank::ThirdClass, false));
         }
 
         // Holy week
@@ -365,21 +364,21 @@ impl Calendar1939 {
         // fill in the rest of the year with ferias / OLOS
         // strictly speaking we don't have to check that the days are open, because the rubrics
         // system will automatically omit common ferias / OLOS in occurrence
-        for week in 0..50 {
-            for weekday in 1..7 {
-                let day = dom_post_epiph + (week * 7) + weekday;
-                if weekday == 6
-                    && days[day]
-                        .iter()
-                        .all(|&o| Rubrics1939.admits_our_lady_on_saturday(o))
-                {
-                    days[day].push(Office::OurLadyOnSaturday);
-                } else if days[day]
+        for day in 10..340 {
+            let weekday = ch.weekday(day);
+            if weekday == Weekday::Sun {
+                continue;
+            } else if weekday == Weekday::Sat
+                && days[day]
                     .iter()
-                    .all(|&o| Rubrics1939.admits_common_feria(o))
-                {
-                    days[day].push(Office::feria(FeriaRank::Common, true));
-                }
+                    .all(|&o| Rubrics1939.admits_our_lady_on_saturday(o))
+            {
+                days[day].push(Office::OurLadyOnSaturday);
+            } else if days[day]
+                .iter()
+                .all(|&o| Rubrics1939.admits_common_feria(o))
+            {
+                days[day].push(Office::feria(FeriaRank::Common, true));
             }
         }
     }

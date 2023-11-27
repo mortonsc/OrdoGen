@@ -27,31 +27,26 @@ static SUNDAYS_AFTER_EPIPHANY: [Office; 6] = [
 
 const EASTER: Office = Office::feast("dom-resurrectionis", FeastRank::DoubleFirstClass)
     .with_person(Person::OurLord)
-    .make_feriatum()
     .with_octave(OctaveRank::FirstOrder)
     .done();
 
 const ASCENSION: Office = Office::feast("in-ascensione-dnjc", FeastRank::DoubleFirstClass)
     .with_person(Person::OurLord)
-    .make_feriatum()
     .with_vigil(VigilRank::Common)
     .done();
 
 const PENTECOST: Office = Office::feast("dom-pentecostes", FeastRank::DoubleFirstClass)
     .with_person(Person::OurLord)
-    .make_feriatum()
     .with_vigil(VigilRank::FirstClass)
     .with_octave(OctaveRank::FirstOrder)
     .done();
 
 const TRINITY_SUNDAY: Office = Office::feast("dom-ss-trinitatis", FeastRank::DoubleFirstClass)
     .with_person(Person::OurLord)
-    .make_feriatum()
     .done();
 
 const CORPUS_CHRISTI: Office = Office::feast("ss-corporis-christi", FeastRank::DoubleFirstClass)
     .with_person(Person::OurLord)
-    .make_feriatum()
     .done();
 
 const SACRED_HEART: Office = Office::feast("ss-cordis-jesu", FeastRank::DoubleFirstClass)
@@ -213,11 +208,11 @@ impl Calendar1962 {
             days[palm_sunday + weekday].push(Office::feria(FeriaRank::Privileged, true));
         }
         days[palm_sunday + 4]
-            .push(Office::feria(FeriaRank::DoubleFirstClass, true).with_id("in-coena-domini"));
+            .push(Office::feria(FeriaRank::Privileged, true).with_id("in-coena-domini"));
         days[palm_sunday + 5]
-            .push(Office::feria(FeriaRank::DoubleFirstClass, true).with_id("in-parasceve"));
+            .push(Office::feria(FeriaRank::Privileged, true).with_id("in-parasceve"));
         days[palm_sunday + 6]
-            .push(Office::feria(FeriaRank::DoubleFirstClass, true).with_id("sabbato-sancto"));
+            .push(Office::feria(FeriaRank::Privileged, true).with_id("sabbato-sancto"));
 
         // Easter week
         let inf_oct_pascha = EASTER.day_within_octave().unwrap();
@@ -291,21 +286,21 @@ impl Calendar1962 {
         // fill in the rest of the year with ferias / OLOS
         // strictly speaking we don't have to check that the days are open, because the rubrics
         // system will automatically omit common ferias / OLOS in occurrence
-        for week in 0..50 {
-            for weekday in 1..7 {
-                let day = dom_post_epiph + (week * 7) + weekday;
-                if weekday == 6
-                    && days[day]
-                        .iter()
-                        .all(|&o| Rubrics1939.admits_our_lady_on_saturday(o))
-                {
-                    days[day].push(Office::OurLadyOnSaturday);
-                } else if days[day]
+        for day in 0..340 {
+            let weekday = ch.weekday(day);
+            if weekday == Weekday::Sun {
+                continue;
+            } else if weekday == Weekday::Sat
+                && days[day]
                     .iter()
-                    .all(|&o| Rubrics1939.admits_common_feria(o))
-                {
-                    days[day].push(Office::feria(FeriaRank::Common, true));
-                }
+                    .all(|&o| Rubrics1962.admits_our_lady_on_saturday(o))
+            {
+                days[day].push(Office::OurLadyOnSaturday);
+            } else if days[day]
+                .iter()
+                .all(|&o| Rubrics1962.admits_common_feria(o))
+            {
+                days[day].push(Office::feria(FeriaRank::Common, true));
             }
         }
     }

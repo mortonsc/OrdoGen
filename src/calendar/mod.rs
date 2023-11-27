@@ -61,6 +61,10 @@ impl CalendarHelper {
         let date = NaiveDate::from_yo_opt(self.year, (ord + 1) as u32).unwrap();
         (date.month(), date.day())
     }
+    pub fn weekday(self, ord: usize) -> Weekday {
+        let date = NaiveDate::from_yo_opt(self.year, (ord + 1) as u32).unwrap();
+        date.weekday()
+    }
     pub fn is_sunday(self, ord: usize) -> bool {
         NaiveDate::from_yo_opt(self.year, (ord + 1) as u32)
             .expect("invalid ordinal date")
