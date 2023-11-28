@@ -1,7 +1,5 @@
 use super::*;
 
-use log::error;
-
 #[derive(Clone, Copy)]
 pub struct Rubrics1962;
 
@@ -256,7 +254,11 @@ impl RubricsSystem for Rubrics1962 {
                 rank: FeastRank::DoubleSecondClass,
                 person: Person::OurLord,
                 ..
-            }) => is_sunday,
+            })
+            | Office::Vigil {
+                rank: VigilRank::FirstClass,
+                ..
+            } => is_sunday,
             _ => false,
         }
     }
@@ -428,7 +430,7 @@ impl RubricsSystem for Rubrics1962 {
             }) | Office::Feria {
                 rank: FeriaRank::Common,
                 ..
-            }
+            } | Office::Empty
         )
     }
     // No anticipated Sundays in the 62 rubrics

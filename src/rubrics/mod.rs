@@ -624,7 +624,7 @@ pub trait RubricsSystem {
             Office::Feast(FeastDetails {
                 rank: FeastRank::Commemoration,
                 ..
-            })
+            }) | Office::Empty
         )
     }
     fn admits_our_lady_on_saturday(&self, off: Office) -> bool;
@@ -778,7 +778,7 @@ pub trait RubricsSystem {
         // the commemoration of the preceding/following office always comes first
         let sort_start = if comm_of_praec_seq { 1 } else { 0 };
         to_commemorate[sort_start..]
-            .sort_by(|&c1, &c2| self.compare_commemoration_order(c1.office(), c2.office()));
+            .sort_by(|c1, c2| self.compare_commemoration_order(c1.office(), c2.office()));
         // remove commemorations of the same subject
         // assumes that the commemoration that comes later is the one that should be removed
         // in particular this correctly handles the case where the office on the preceding day was

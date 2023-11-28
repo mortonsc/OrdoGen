@@ -37,12 +37,11 @@ impl<'a> Ordo<'a> {
             all_lauds.push(lauds);
         }
         for day in 0..(days.len() - 1) {
-            let vespers = rubrics_system.order_vespers(
+            all_vespers.push(rubrics_system.order_vespers(
                 &all_lauds[day],
                 &all_lauds[day + 1],
                 ch.is_sunday(day + 1),
-            );
-            all_vespers.push(vespers);
+            ));
         }
         let dec31 = ch.ordinal0(12, 31);
         // OrderedLauds of Jan 1 is the same every year

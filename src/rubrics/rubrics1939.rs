@@ -714,7 +714,10 @@ impl RubricsSystem for Rubrics1939 {
             Office::Feast(FeastDetails {
                 rank: FeastRank::Commemoration | FeastRank::Simple,
                 ..
-            })
+            }) | Office::Feria {
+                rank: FeriaRank::Common,
+                ..
+            } | Office::Empty
         )
     }
     fn admits_anticipated_sunday(&self, off: Office) -> bool {

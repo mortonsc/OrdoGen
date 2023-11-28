@@ -340,17 +340,17 @@ impl Calendar1939 {
             ));
         }
 
-        let mut first_resumed_sunday_post_epiph = 7;
+        let mut first_resumed_sunday_after_epiph = 7;
         for i in 1..=6 {
             let ord = post_pent_24 - (i * 7);
             if ord <= post_pent_23 {
                 break;
             }
             days[ord].push(add_matins_id(ch, SUNDAYS_AFTER_EPIPHANY[6 - i], ord));
-            first_resumed_sunday_post_epiph -= 1;
+            first_resumed_sunday_after_epiph -= 1;
         }
-        assert!(last_sunday_after_epiph < first_resumed_sunday_post_epiph);
-        let n_missing_sundays = first_resumed_sunday_post_epiph - last_sunday_after_epiph - 1;
+        assert!(last_sunday_after_epiph < first_resumed_sunday_after_epiph);
+        let n_missing_sundays = first_resumed_sunday_after_epiph - last_sunday_after_epiph - 1;
         if n_missing_sundays == 1 {
             let missing_sunday = last_sunday_after_epiph + 1;
             days[ch.septuagesima() - 1].push(
