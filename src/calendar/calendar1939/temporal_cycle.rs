@@ -194,12 +194,11 @@ impl Calendar1939 {
 
         // Epiphany cycle
         let dom_post_epiph = ch.sunday_after(ch.epiphany()).unwrap();
-        let dom_post_epiph = if dom_post_epiph == ch.ordinal0(1, 13) {
-            dom_post_epiph - 1
+        if dom_post_epiph == ch.ordinal0(1, 13) {
+            days[dom_post_epiph - 1].push(SUNDAYS_AFTER_EPIPHANY[0]);
         } else {
-            dom_post_epiph
-        };
-        days[dom_post_epiph].push(SUNDAYS_AFTER_EPIPHANY[0]);
+            days[dom_post_epiph].push(SUNDAYS_AFTER_EPIPHANY[0]);
+        }
         let mut last_sunday_after_epiph = 1;
         for (week, &sunday) in SUNDAYS_AFTER_EPIPHANY.iter().enumerate().skip(1) {
             let ord = dom_post_epiph + (week * 7);
