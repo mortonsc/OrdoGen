@@ -90,7 +90,7 @@ static EASTER_CYCLE_SUNDAYS: [Office; N_EASTER_CYCLE_SUNDAYS] = [
     Office::sunday("dom-1-post-pent", SundayRank::Common),
     Office::sunday(
         "dom-inf-oct-ss-corporis-christi",
-        SundayRank::WithinOctave(OctaveRank::ThirdOrder),
+        SundayRank::WithinOctave(OctaveRank::SecondOrder),
     ),
     Office::sunday(
         "dom-inf-oct-ss-cordis-jesu",
